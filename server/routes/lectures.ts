@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { LectureModel, CreateLectureData } from "../models/Lecture";
-import { AuthenticatedRequest } from "../middleware/auth";
+import { LectureModel, CreateLectureData } from "../models/Lecture.js";
+import { AuthenticatedRequest } from "../middleware/auth.js";
 
 export async function getLectures(req: AuthenticatedRequest, res: Response) {
   try {
