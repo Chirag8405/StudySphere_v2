@@ -1,8 +1,8 @@
 import express from "express";
 import cors from "cors";
-import { initializeDatabase } from "./database/connection";
-import { authenticateToken } from "./middleware/auth";
-import config from "./config/environment";
+import { initializeDatabase } from "./database/connection.js";
+import { authenticateToken } from "./middleware/auth.js";
+import config from "./config/environment.js";
 import {
   securityHeaders,
   apiRateLimit,
@@ -19,17 +19,17 @@ import {
   validateAttendance,
   validateUpdateAttendance,
   validateId,
-} from "./middleware/security";
+} from "./middleware/security.js";
 
 // Route imports
-import { login, register, getProfile, refreshJwtToken } from "./routes/auth";
+import { login, register, getProfile, refreshJwtToken } from "./routes/auth.js";
 import {
   getLectures,
   getLecture,
   createLecture,
   updateLecture,
   deleteLecture,
-} from "./routes/lectures";
+} from "./routes/lectures.js";
 import {
   getAttendance,
   getAttendanceStats,
@@ -37,7 +37,7 @@ import {
   createAttendance,
   updateAttendance,
   deleteAttendance,
-} from "./routes/attendance";
+} from "./routes/attendance.js";
 import {
   getAssignments,
   getAssignment,
@@ -46,8 +46,8 @@ import {
   updateAssignment,
   deleteAssignment,
   markOverdueAssignments,
-} from "./routes/assignments";
-import { getDashboardData } from "./routes/dashboard";
+} from "./routes/assignments.js";
+import { getDashboardData } from "./routes/dashboard.js";
 
 export function createServer() {
   const app = express();
