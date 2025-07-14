@@ -1,4 +1,4 @@
-const { createClient } = require("@libsql/client");
+import { createClient } from "@libsql/client";
 
 let client = null;
 
@@ -7,7 +7,6 @@ function getTursoClient() {
     const url = process.env.DATABASE_URL;
     const authToken = process.env.DATABASE_AUTH_TOKEN;
 
-    // For local development without Turso
     if (!url || url.includes("file:")) {
       console.log("⚠️  Using local SQLite fallback (development only)");
       client = createClient({
@@ -24,11 +23,10 @@ function getTursoClient() {
   return client;
 }
 
-async function initializeTursoDatabase() {
+export async function initializeTursoDatabase() {
   const db = getTursoClient();
 
   try {
-    // Create users table
     await db.execute(`
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,7 +37,6 @@ async function initializeTursoDatabase() {
       )
     `);
 
-    // Create lectures table
     await db.execute(`
       CREATE TABLE IF NOT EXISTS lectures (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,7 +50,6 @@ async function initializeTursoDatabase() {
       )
     `);
 
-    // Create assignments table
     await db.execute(`
       CREATE TABLE IF NOT EXISTS assignments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -76,41 +72,23 @@ async function initializeTursoDatabase() {
   }
 }
 
-// Helper functions to match your existing SQLite interface
-async function dbGet(query, params = []) {
+export async function dbGet(query, params = []) {
   const db = getTursoClient();
-  const result = await db.execute({
-    sql: query,
-    args: params,
-  });
+  const result = await db.execute({ sql: query, args: params });
   return result.rows[0] || null;
 }
 
-async function dbAll(query, params = []) {
+export async function dbAll(query, params = []) {
   const db = getTursoClient();
-  const result = await db.execute({
-    sql: query,
-    args: params,
-  });
+  const result = await db.execute({ sql: query, args: params });
   return result.rows;
 }
 
-async function dbRun(query, params = []) {
+export async function dbRun(query, params = []) {
   const db = getTursoClient();
-  const result = await db.execute({
-    sql: query,
-    args: params,
-  });
+  const result = await db.execute({ sql: query, args: params });
   return {
     lastInsertRowid: result.lastInsertRowid,
     changes: result.rowsAffected,
   };
 }
-
-module.exports = {
-  getTursoClient,
-  initializeTursoDatabase,
-  dbGet,
-  dbAll,
-  dbRun,
-};
