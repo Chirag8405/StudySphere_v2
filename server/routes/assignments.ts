@@ -4,8 +4,8 @@ import {
   CreateAssignmentData,
   UpdateAssignmentData,
   AssignmentStatus,
-} from "../models/Assignment";
-import { AuthenticatedRequest } from "../middleware/auth";
+} from "../models/Assignment.js";
+import { AuthenticatedRequest } from "../middleware/auth.js";
 
 export async function getAssignments(req: AuthenticatedRequest, res: Response) {
   try {
