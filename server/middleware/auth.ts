@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
-import { verifyToken } from "../utils/jwt-secure";
-import { UserModel } from "../models/User";
-import DatabaseSecurity from "../utils/database-security";
+import { verifyToken } from "../utils/jwt-secure.js";
+import { UserModel } from "../models/User.js";
+import DatabaseSecurity from "../utils/database-security.js";
 
 export interface AuthenticatedRequest extends Request {
   user?: {
