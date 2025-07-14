@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { UserModel } from "../models/User";
-import { generateToken, refreshToken } from "../utils/jwt-secure";
+import { generateToken, refreshToken as refreshJwtToken} from "../utils/jwt-secure";
 import { AuthenticatedRequest } from "../middleware/auth";
 import PasswordSecurity from "../utils/password";
 import DatabaseSecurity from "../utils/database-security";
@@ -119,21 +119,29 @@ export async function getProfile(req: AuthenticatedRequest, res: Response) {
   }
 }
 
-export async function refreshToken(req: AuthenticatedRequest, res: Response) {
+export async function refreshTokenHandler(
+  req: AuthenticatedRequest,
+  res: Response
+) {
   try {
-    if (!req.user) {
-      return res.status(401).json({ error: "User not authenticated" });
+    // Expect the old token in the Authorization header: "Bearer <token>"
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res
+        .status(400)
+        .json({ error: "Refresh token must be provided in Authorization header" });
     }
 
-    // Generate new JWT token
-    const token = generateToken({
-      userId: req.user.id,
-      email: req.user.email,
-    });
+    const oldToken = authHeader.substring(7);
+    // Use your util to verify, revoke, and issue a new one:
+    const newToken = refreshJwtToken(oldToken);
 
-    res.json({ token });
-  } catch (error) {
-    console.error("Refresh token error:", error);
+    return res.json({ token: newToken });
+  } catch (error: any) {
+    console.error("Refresh token error:", error.message ?? error);
+    if (error.message === "Token expired" || error.message === "Invalid token") {
+      return res.status(401).json({ error: error.message });
+    }
     res.status(500).json({ error: "Internal server error" });
   }
 }
