@@ -1,6 +1,6 @@
 [build]
   command = "npm run build:netlify"
-  publish = "dist"
+  publish = "dist/spa"
   functions = "dist/server"
 
 [build.environment]
