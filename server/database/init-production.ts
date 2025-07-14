@@ -1,4 +1,4 @@
-import { initializeDatabase } from "./connection";
+import { initializeDatabase } from "./connection.js";
 
 export async function initializeProductionDatabase() {
   try {
