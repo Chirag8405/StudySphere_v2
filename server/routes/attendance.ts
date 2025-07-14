@@ -3,8 +3,8 @@ import {
   AttendanceModel,
   CreateAttendanceData,
   AttendanceStatus,
-} from "../models/Attendance";
-import { AuthenticatedRequest } from "../middleware/auth";
+} from "../models/Attendance.js";
+import { AuthenticatedRequest } from "../middleware/auth.js";
 
 export async function getAttendance(req: AuthenticatedRequest, res: Response) {
   try {
