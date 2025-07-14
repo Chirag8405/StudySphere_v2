@@ -277,29 +277,12 @@ npm run typecheck
 - [ ] Real-time notifications
 - [ ] Calendar integration
 - [ ] Grade tracking
-- [ ] Study groups and collaboration
 - [ ] Export to PDF reports
 - [ ] Email reminders
 - [ ] Advanced analytics
 
-## 🔗 MCP Integrations
-
-StudySphere supports integration with these MCP servers via Builder.io:
-
-- **Neon/Prisma** - PostgreSQL database for production
-- **Sentry** - Error monitoring and performance tracking
-- **Netlify** - Deployment and hosting
-- **Linear** - Project management and issue tracking
-- **Notion** - Documentation and note-taking
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 👥 Support
-
-For support, email support@studysphere.com or join our Discord community.
-
----
-
-**Built with ❤️ by the StudySphere Team**
