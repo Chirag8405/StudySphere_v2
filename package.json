@@ -26,7 +26,7 @@
     "dev:frontend": "vite",
     "dev:api": "tsx watch server/api-dev.ts",
     "build": "npm run build:client && npm run build:server",
-    "build:client": "vite build",
+    "build:client": "npx vite build",
     "build:server": "vite build --config vite.config.server.ts",
     "build:production": "npm run build:client && npm run build:server:production",
     "build:server:production": "vite build --config vite.config.server-production.ts",
