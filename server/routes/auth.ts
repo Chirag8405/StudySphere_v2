@@ -145,3 +145,6 @@ export async function refreshTokenHandler(
     res.status(500).json({ error: "Internal server error" });
   }
 }
+
+export { refreshJwtToken };
+
