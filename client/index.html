@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <title>StudySphere - Student Dashboard</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Icons and Favicons -->
+    <link rel="icon" href="/icons/icon-192x192.png" type="image/png" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+    <link rel="shortcut icon" href="/icons/icon-192x192.png" />
+
+    <!-- iOS Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="apple-mobile-web-app-title" content="StudySphere" />
+    <link
+      rel="apple-touch-icon"
+      sizes="152x152"
+      href="/icons/icon-152x152.png"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="/icons/icon-192x192.png"
+    />
+
+    <!-- Android Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="background-color" content="#ffffff" />
+
+    <!-- Windows Meta Tags -->
+    <meta name="msapplication-TileColor" content="#0f172a" />
+    <meta name="msapplication-TileImage" content="/icons/icon-144x144.png" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
+
+    <!-- General Meta Tags -->
+    <meta
+      name="description"
+      content="A comprehensive student dashboard for tracking attendance and assignments"
+    />
+    <meta
+      name="keywords"
+      content="student, dashboard, attendance, assignments, education, tracking"
+    />
+    <meta name="author" content="StudySphere Team" />
+
+    <!-- Social Media Meta Tags -->
+    <meta property="og:title" content="StudySphere - Student Dashboard" />
+    <meta
+      property="og:description"
+      content="Track your academic progress with comprehensive attendance and assignment management"
+    />
+    <meta property="og:image" content="/icons/icon-512x512.png" />
+    <meta property="og:url" content="/" />
+    <meta property="og:type" content="website" />
+
+    <!-- Twitter Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="StudySphere - Student Dashboard" />
+    <meta
+      name="twitter:description"
+      content="Track your academic progress with comprehensive attendance and assignment management"
+    />
+    <meta name="twitter:image" content="/icons/icon-512x512.png" />
+
+    <!-- Prevent zoom on iOS -->
+    <meta name="format-detection" content="telephone=no" />
+
+    <!-- Fullscreen and standalone mode -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-touch-fullscreen" content="yes" />
+
+    <!-- Enhanced Recharts warning suppression -->
+    <script>
+      // Store original console methods
+      const originalWarn = console.warn;
+      const originalError = console.error;
+      const originalLog = console.log;
+
+      // Enhanced warning suppression function
+      function suppressRechartsWarnings(...args) {
+        const message = args
+          .map((arg) => {
+            if (typeof arg === "string") return arg;
+            if (arg && typeof arg === "object") return JSON.stringify(arg);
+            return String(arg);
+          })
+          .join(" ");
+
+        // Check for Recharts-related warnings
+        return (
+          message.includes(
+            "defaultProps will be removed from function components",
+          ) ||
+          message.includes("Support for defaultProps will be removed") ||
+          (message.includes("XAxis") && message.includes("defaultProps")) ||
+          (message.includes("YAxis") && message.includes("defaultProps")) ||
+          message.includes("Use JavaScript default parameters instead")
+        );
+      }
+
+      // Override console.warn
+      console.warn = function (...args) {
+        if (suppressRechartsWarnings(...args)) {
+          return; // Suppress the warning
+        }
+        originalWarn.apply(console, args);
+      };
+
+      // Override console.error
+      console.error = function (...args) {
+        if (suppressRechartsWarnings(...args)) {
+          return; // Suppress the error
+        }
+        originalError.apply(console, args);
+      };
+
+      // Override console.log as a fallback
+      console.log = function (...args) {
+        if (suppressRechartsWarnings(...args)) {
+          return; // Suppress the log
+        }
+        originalLog.apply(console, args);
+      };
+
+      // Intercept React's warning system if available
+      if (typeof window !== "undefined") {
+        // Override React's warning function if it exists
+        const suppressReactWarnings = () => {
+          if (
+            window.React &&
+            window.React.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED
+          ) {
+            const internals =
+              window.React.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+            if (internals.ReactDebugCurrentFrame) {
+              const originalWarn =
+                internals.ReactDebugCurrentFrame.setExtraStackFrame;
+              if (originalWarn) {
+                internals.ReactDebugCurrentFrame.setExtraStackFrame = function (
+                  ...args
+                ) {
+                  if (!suppressRechartsWarnings(...args)) {
+                    return originalWarn.apply(this, args);
+                  }
+                };
+              }
+            }
+          }
+        };
+
+        // Try to suppress warnings after React loads
+        window.addEventListener("load", suppressReactWarnings);
+        setTimeout(suppressReactWarnings, 100);
+        setTimeout(suppressReactWarnings, 500);
+        setTimeout(suppressReactWarnings, 1000);
+      }
+    </script>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/App.tsx"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("/sw.js")
+            .then((registration) => {
+              console.log("SW registered: ", registration);
+
+              // Check for updates
+              registration.addEventListener("updatefound", () => {
+                const newWorker = registration.installing;
+                if (newWorker) {
+                  newWorker.addEventListener("statechange", () => {
+                    if (newWorker.state === "installed") {
+                      if (navigator.serviceWorker.controller) {
+                        // New version available
+                        console.log("New version available");
+                      } else {
+                        // First time install
+                        console.log("App is ready for offline use");
+                      }
+                    }
+                  });
+                }
+              });
+            })
+            .catch((registrationError) => {
+              console.log("SW registration failed: ", registrationError);
+            });
+        });
+
+        // Listen for messages from service worker
+        navigator.serviceWorker.addEventListener("message", (event) => {
+          if (event.data && event.data.type === "SKIP_WAITING") {
+            window.location.reload();
+          }
+        });
+      }
+
+      // Handle app install prompt
+      let deferredPrompt;
+      window.addEventListener("beforeinstallprompt", (e) => {
+        // Prevent Chrome 67 and earlier from automatically showing the prompt
+        e.preventDefault();
+        // Stash the event so it can be triggered later
+        deferredPrompt = e;
+      });
+
+      // Track when the app is installed
+      window.addEventListener("appinstalled", (evt) => {
+        console.log("App was installed successfully");
+      });
+
+      // Prevent pull-to-refresh on mobile
+      document.body.style.overscrollBehavior = "none";
+
+      // Disable double-tap zoom
+      let lastTouchEnd = 0;
+      document.addEventListener(
+        "touchend",
+        function (event) {
+          const now = new Date().getTime();
+          if (now - lastTouchEnd <= 300) {
+            event.preventDefault();
+          }
+          lastTouchEnd = now;
+        },
+        false,
+      );
+
+      // Prevent pinch zoom
+      document.addEventListener("gesturestart", function (e) {
+        e.preventDefault();
+      });
+
+      // Hide address bar on mobile
+      window.addEventListener("load", () => {
+        setTimeout(() => {
+          if (window.innerHeight < window.outerHeight) {
+            window.scrollTo(0, 1);
+          }
+        }, 100);
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e40af;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" fill="url(#grad)" rx="38"/>
+  <g transform="translate(38, 38)">
+    <!-- Graduation cap icon -->
+    <path d="M58 29L29 48L58 67L87 48Z" fill="white" stroke="none"/>
+    <path d="M77 54L77 77L87 81L87 58Z" fill="white"/>
+    <ellipse cx="58" cy="77" rx="15" ry="6" fill="white"/>
+  </g>
+  <text x="50%" y="75%" text-anchor="middle" fill="white" font-size="24" font-family="Arial, sans-serif" font-weight="bold">StudySphere</text>
+</svg>
