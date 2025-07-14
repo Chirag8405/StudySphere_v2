@@ -1,6 +1,6 @@
 import jwt, { Secret, SignOptions} from "jsonwebtoken";
 import crypto from "crypto";
-import config from "../config/environment.ts";
+import config from "../config/environment.js";
 
 export interface JwtPayload {
   userId: string;
