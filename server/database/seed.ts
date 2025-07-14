@@ -1,8 +1,8 @@
-import { getDatabase } from "./connection";
-import { UserModel } from "../models/User";
-import { LectureModel } from "../models/Lecture";
-import { AttendanceModel } from "../models/Attendance";
-import { AssignmentModel } from "../models/Assignment";
+import { getDatabase } from "./connection.js";
+import { UserModel } from "../models/User.js";
+import { LectureModel } from "../models/Lecture.js";
+import { AttendanceModel } from "../models/Attendance.js";
+import { AssignmentModel } from "../models/Assignment.js";
 
 export async function seedDatabase() {
   try {
