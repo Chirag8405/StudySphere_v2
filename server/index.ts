@@ -22,7 +22,7 @@ import {
 } from "./middleware/security";
 
 // Route imports
-import { login, register, getProfile, refreshToken } from "./routes/auth";
+import { login, register, getProfile, refreshJwtToken } from "./routes/auth";
 import {
   getLectures,
   getLecture,
@@ -113,7 +113,7 @@ export function createServer() {
 
   // Auth routes (protected)
   app.get("/api/auth/profile", authenticateToken, getProfile);
-  app.post("/api/auth/refresh", authenticateToken, refreshToken);
+  app.post("/api/auth/refresh", authenticateToken, refreshJwtToken);
 
   // Dashboard route (protected)
   app.get("/api/dashboard", authenticateToken, getDashboardData);
