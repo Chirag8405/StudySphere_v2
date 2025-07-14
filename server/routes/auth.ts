@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
-import { UserModel } from "../models/User";
-import { generateToken, refreshToken as refreshJwtToken} from "../utils/jwt-secure";
-import { AuthenticatedRequest } from "../middleware/auth";
-import PasswordSecurity from "../utils/password";
-import DatabaseSecurity from "../utils/database-security";
+import { UserModel } from "../models/User.js";
+import { generateToken, refreshToken as refreshJwtToken} from "../utils/jwt-secure.js";
+import { AuthenticatedRequest } from "../middleware/auth.js";
+import PasswordSecurity from "../utils/password.js";
+import DatabaseSecurity from "../utils/database-security.js";
 
 interface LoginRequest {
   email: string;
