@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import config from "../config/environment";
+import config from "../config/environment.js";
 
 interface PasswordStrengthResult {
   isStrong: boolean;
