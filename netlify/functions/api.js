@@ -1,7 +1,7 @@
 const serverless = require("serverless-http");
 
 // Import Turso-powered API
-const getApp = require("../../server/api-netlify-turso.js");
+const getApp = require("../../dist/server/api-netlify-turso.js");
 
 // Export the serverless function
 exports.handler = async (event, context) => {
