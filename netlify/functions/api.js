@@ -1,7 +1,7 @@
 import serverless from "serverless-http";
 
 // Import Turso-powered API (make sure the dist file is ESM too)
-import getApp from "../../dist/server/api-netlify-turso.js";
+import getApp from "../../server/api-netlify-turso.js";
 
 // Export the handler as an async function
 export const handler = async (event, context) => {
