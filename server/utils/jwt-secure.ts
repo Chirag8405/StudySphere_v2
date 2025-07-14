@@ -1,4 +1,4 @@
-import jwt from "jsonwebtoken";
+import jwt, { Secret } from "jsonwebtoken";
 import crypto from "crypto";
 import config from "../config/environment";
 
@@ -10,6 +10,7 @@ export interface JwtPayload {
   jti?: string; // JWT ID for token tracking/revocation
 }
 
+const secret: Secret = config.jwtSecret;
 // Token blacklist for revoked tokens (in production, use Redis)
 const revokedTokens = new Set<string>();
 
