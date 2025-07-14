@@ -1,5 +1,5 @@
-import { createServer } from "./index";
-import { initializeDatabase } from "./database/connection";
+import { createServer } from "./index.js";
+import { initializeDatabase } from "./database/connection.js";
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
