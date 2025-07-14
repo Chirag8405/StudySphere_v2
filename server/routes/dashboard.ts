@@ -1,8 +1,8 @@
 import { Response } from "express";
-import { AttendanceModel } from "../models/Attendance";
-import { AssignmentModel } from "../models/Assignment";
-import { LectureModel } from "../models/Lecture";
-import { AuthenticatedRequest } from "../middleware/auth";
+import { AttendanceModel } from "../models/Attendance.js";
+import { AssignmentModel } from "../models/Assignment.js";
+import { LectureModel } from "../models/Lecture.js";
+import { AuthenticatedRequest } from "../middleware/auth.js";
 
 export async function getDashboardData(
   req: AuthenticatedRequest,
