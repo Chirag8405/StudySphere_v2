@@ -1,10 +1,10 @@
-const serverless = require("serverless-http");
+import serverless from "serverless-http";
 
-// Import Turso-powered API
-const getApp = require("../../dist/server/api-netlify-turso.js");
+// Import Turso-powered API (make sure the dist file is ESM too)
+import getApp from "../../dist/server/api-netlify-turso.js";
 
-// Export the serverless function
-exports.handler = async (event, context) => {
+// Export the handler as an async function
+export const handler = async (event, context) => {
   try {
     console.log("🚀 Netlify function starting...");
 
