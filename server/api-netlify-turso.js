@@ -1,16 +1,16 @@
-const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-const rateLimit = require("express-rate-limit");
-const { body, validationResult } = require("express-validator");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const {
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import { body, validationResult } from "express-validator";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import {
   initializeTursoDatabase,
   dbGet,
   dbAll,
   dbRun,
-} = require("./database/turso-client");
+} from "./database/turso-client.js";
 
 // Environment variables
 const JWT_SECRET =
@@ -20,7 +20,6 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:8888";
 
 let initialized = false;
 
-// Create Express app
 function createApp() {
   const app = express();
 
@@ -48,8 +47,8 @@ function createApp() {
 
   // Rate limiting
   const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
+    windowMs: 15 * 60 * 1000,
+    max: 100,
   });
   app.use(limiter);
 
@@ -57,7 +56,6 @@ function createApp() {
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-  // Authentication middleware
   const authenticateToken = (req, res, next) => {
     const authHeader = req.headers["authorization"];
     const token = authHeader && authHeader.split(" ")[1];
@@ -75,7 +73,8 @@ function createApp() {
     });
   };
 
-  // Health check
+  // Routes...
+
   app.get("/api/health", (req, res) => {
     res.json({
       status: "OK",
@@ -84,7 +83,6 @@ function createApp() {
     });
   });
 
-  // Register endpoint
   app.post(
     "/api/auth/register",
     [
@@ -94,28 +92,18 @@ function createApp() {
     ],
     async (req, res) => {
       try {
-        console.log("📝 Registration request:", { email: req.body.email });
-
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-          console.log("❌ Validation errors:", errors.array());
           return res.status(400).json({ errors: errors.array() });
         }
 
         const { email, password, name } = req.body;
-
-        // Check if user exists
-        const existingUser = await dbGet(
-          "SELECT id FROM users WHERE email = ?",
-          [email],
-        );
+        const existingUser = await dbGet("SELECT id FROM users WHERE email = ?", [email]);
 
         if (existingUser) {
-          console.log("⚠️  User already exists:", email);
           return res.status(400).json({ error: "User already exists" });
         }
 
-        // Hash password and create user
         const hashedPassword = await bcrypt.hash(password, 12);
         const result = await dbRun(
           "INSERT INTO users (email, password, name) VALUES (?, ?, ?)",
@@ -127,47 +115,30 @@ function createApp() {
           expiresIn: "24h",
         });
 
-        console.log("✅ User created successfully:", { userId, email });
-
         res.json({
           token,
           user: { id: userId, email, name },
         });
       } catch (error) {
-        console.error("❌ Registration error:", error);
         res.status(500).json({ error: "Server error" });
       }
     },
   );
 
-  // Login endpoint
   app.post(
     "/api/auth/login",
     [body("email").isEmail().normalizeEmail(), body("password").exists()],
     async (req, res) => {
       try {
-        console.log("🔐 Login request:", { email: req.body.email });
-
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-          console.log("❌ Login validation errors:", errors.array());
           return res.status(400).json({ errors: errors.array() });
         }
 
         const { email, password } = req.body;
+        const user = await dbGet("SELECT * FROM users WHERE email = ?", [email]);
 
-        const user = await dbGet("SELECT * FROM users WHERE email = ?", [
-          email,
-        ]);
-
-        if (!user) {
-          console.log("⚠️  User not found:", email);
-          return res.status(400).json({ error: "Invalid credentials" });
-        }
-
-        const validPassword = await bcrypt.compare(password, user.password);
-        if (!validPassword) {
-          console.log("⚠️  Invalid password for:", email);
+        if (!user || !(await bcrypt.compare(password, user.password))) {
           return res.status(400).json({ error: "Invalid credentials" });
         }
 
@@ -175,20 +146,16 @@ function createApp() {
           expiresIn: "24h",
         });
 
-        console.log("✅ Login successful:", { userId: user.id, email });
-
         res.json({
           token,
           user: { id: user.id, email: user.email, name: user.name },
         });
       } catch (error) {
-        console.error("❌ Login error:", error);
         res.status(500).json({ error: "Server error" });
       }
     },
   );
 
-  // Get lectures
   app.get("/api/lectures", authenticateToken, async (req, res) => {
     try {
       const lectures = await dbAll(
@@ -196,13 +163,11 @@ function createApp() {
         [req.user.userId],
       );
       res.json(lectures);
-    } catch (error) {
-      console.error("❌ Get lectures error:", error);
+    } catch {
       res.status(500).json({ error: "Server error" });
     }
   });
 
-  // Create lecture
   app.post(
     "/api/lectures",
     [
@@ -229,14 +194,12 @@ function createApp() {
         ]);
 
         res.status(201).json(lecture);
-      } catch (error) {
-        console.error("❌ Create lecture error:", error);
+      } catch {
         res.status(500).json({ error: "Server error" });
       }
     },
   );
 
-  // Update lecture attendance
   app.put("/api/lectures/:id", authenticateToken, async (req, res) => {
     try {
       const { id } = req.params;
@@ -257,13 +220,11 @@ function createApp() {
       }
 
       res.json(lecture);
-    } catch (error) {
-      console.error("❌ Update lecture error:", error);
+    } catch {
       res.status(500).json({ error: "Server error" });
     }
   });
 
-  // Get assignments
   app.get("/api/assignments", authenticateToken, async (req, res) => {
     try {
       const assignments = await dbAll(
@@ -271,13 +232,11 @@ function createApp() {
         [req.user.userId],
       );
       res.json(assignments);
-    } catch (error) {
-      console.error("❌ Get assignments error:", error);
+    } catch {
       res.status(500).json({ error: "Server error" });
     }
   });
 
-  // Create assignment
   app.post(
     "/api/assignments",
     [
@@ -304,8 +263,7 @@ function createApp() {
         );
 
         res.status(201).json(assignment);
-      } catch (error) {
-        console.error("❌ Create assignment error:", error);
+      } catch {
         res.status(500).json({ error: "Server error" });
       }
     },
@@ -316,7 +274,7 @@ function createApp() {
 
 let app = null;
 
-async function getApp() {
+export default async function getApp() {
   if (!initialized) {
     try {
       console.log("🚀 Initializing Turso database...");
@@ -335,5 +293,3 @@ async function getApp() {
 
   return app;
 }
-
-module.exports = getApp;
