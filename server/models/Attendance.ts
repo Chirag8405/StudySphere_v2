@@ -1,4 +1,4 @@
-import { getDatabase } from "../database/connection";
+import { getDatabase } from "../database/connection.js";
 import { v4 as uuidv4 } from "uuid";
 
 export type AttendanceStatus = "present" | "absent" | "cancelled";
