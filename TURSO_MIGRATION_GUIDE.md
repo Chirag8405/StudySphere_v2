@@ -32,11 +32,10 @@ turso db create studysphere
 # Get your database URL
 turso db show studysphere --url
 # Output: libsql://studysphere-[username].turso.io
-# libsql://studysphere-chirag8405.aws-ap-south-1.turso.io
 # Create authentication token
 turso db tokens create studysphere
 # Output: eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9...
-# eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NTI0NzQwNzgsImlkIjoiMGNjM2YzMTktNjk5OS00NTdkLWIxM2QtMWNlODFmZDQyMTM5IiwicmlkIjoiN2JlMGE2NmYtOTM1Yy00MjIxLWFlNzktYWI0OTUyOWI5YTA0In0.CpCw4IUNS00COB4ndrQ6-iwKly1UeR_pTyMmbSWjPA-_ZTZ4yrEstAMaFnYt4C2CyVz3xXNeIbpxA0GGWNNeAA
+
 ```
 
 
