@@ -1,6 +1,6 @@
-import jwt, { Secret } from "jsonwebtoken";
+import jwt, { Secret, SignOptions} from "jsonwebtoken";
 import crypto from "crypto";
-import config from "../config/environment";
+import config from "../config/environment.ts";
 
 export interface JwtPayload {
   userId: string;
@@ -28,12 +28,13 @@ export function generateToken(
     jti,
   };
 
-  return jwt.sign(tokenPayload, config.jwtSecret, {
+  return jwt.sign(tokenPayload, secret as Secret, {
     expiresIn: config.jwtExpiresIn,
     algorithm: "HS256",
     issuer: "studysphere",
     audience: "studysphere-users",
-  });
+  }as SignOptions
+   );
 }
 
 export function verifyToken(token: string): JwtPayload {
