@@ -90,9 +90,11 @@ export default function Assignments() {
       setIsLoading(true);
       setError(null);
       const data = await ApiService.getAssignments();
-      const assignmentList: Assignment[] = Array.isArray(data?.assignments)
-      ? data.assignments
-      : [];
+      const assignmentList: Assignment[] = Array.isArray(data)
+  ? data
+  : Array.isArray(data?.assignments)
+    ? data.assignments
+    : [];
 
       console.log("Fetching assignments...");
 console.log("Fetched data:", data);
