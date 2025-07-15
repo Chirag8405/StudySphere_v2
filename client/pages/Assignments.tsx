@@ -90,10 +90,14 @@ export default function Assignments() {
       setIsLoading(true);
       setError(null);
       const data = await ApiService.getAssignments();
-      setAssignments(data.assignments);
+      const assignmentList: Assignment[] = Array.isArray(data?.assignments)
+      ? data.assignments
+      : [];
+
+      setAssignments(assignmentList);
 
       // Show info if no assignments found
-      if (data.assignments.length === 0) {
+      if (assignmentList.length === 0) {
         toast.info("No Assignments Found", {
           description:
             "Create your first assignment to start tracking your tasks",
