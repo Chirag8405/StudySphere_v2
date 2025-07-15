@@ -179,79 +179,71 @@ const authenticateToken = (req, res, next) => {
   try {
     const userId = req.user.userId;
 
-    // Fetch lectures with attendance stats (explicit columns only)
+    // Fetch all lectures
     const lectures = await dbAll(
       `SELECT 
-        l.id,
-        l.user_id,
-        l.name,
-        l.subject,
-        l.date,
-        l.time,
-        l.attendance_status,
-        l.created_at,
-        COUNT(a.id) AS total_classes,
-        SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) AS attended_classes,
-        ROUND(
-          100.0 * SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) / COUNT(a.id),
-          0
-        ) AS attendance_percentage
-      FROM lectures l
-      LEFT JOIN attendance a ON l.id = a.lecture_id
-      WHERE l.user_id = ?
-      GROUP BY l.id
-      ORDER BY l.date ASC, l.time ASC`,
+         id,
+         user_id,
+         name,
+         subject,
+         date,
+         time,
+         attendance_status,
+         created_at
+       FROM lectures
+       WHERE user_id = ?
+       ORDER BY date ASC, time ASC`,
       [userId]
     );
 
-    // Attendance stats (totals)
-    const stats = await dbGet(
+    // Calculate attendance stats manually
+    const total = lectures.length;
+    const present = lectures.filter((l) => l.attendance_status === "present").length;
+    const attendance_percentage = total > 0 ? Math.round((present / total) * 100) : 0;
+
+    // Weekly attendance stats
+    const weeklyDataRaw = await dbAll(
       `SELECT 
-        COUNT(*) AS total,
-        SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) AS present
-      FROM attendance a
-      JOIN lectures l ON a.lecture_id = l.id
-      WHERE l.user_id = ?`,
+         strftime('%w', date) AS dayNum,
+         CASE strftime('%w', date)
+             WHEN '0' THEN 'Sunday'
+             WHEN '1' THEN 'Monday'
+             WHEN '2' THEN 'Tuesday'
+             WHEN '3' THEN 'Wednesday'
+             WHEN '4' THEN 'Thursday'
+             WHEN '5' THEN 'Friday'
+             WHEN '6' THEN 'Saturday'
+         END AS day,
+         attendance_status
+       FROM lectures
+       WHERE user_id = ? AND date >= date('now', '-6 days')`,
       [userId]
     );
 
-    const attendanceStats = {
-      total: stats.total || 0,
-      present: stats.present || 0,
-      attendance_percentage: stats.total
-        ? Math.round((stats.present / stats.total) * 100)
-        : 0,
-    };
-
-    // Weekly attendance overview
-    const weeklyData = await dbAll(
-      `SELECT strftime('%w', date) AS dayNum,
-              CASE strftime('%w', date)
-                  WHEN '0' THEN 'Sunday'
-                  WHEN '1' THEN 'Monday'
-                  WHEN '2' THEN 'Tuesday'
-                  WHEN '3' THEN 'Wednesday'
-                  WHEN '4' THEN 'Thursday'
-                  WHEN '5' THEN 'Friday'
-                  WHEN '6' THEN 'Saturday'
-              END AS day,
-              COUNT(*) AS total,
-              SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) AS attended
-       FROM attendance a
-       JOIN lectures l ON a.lecture_id = l.id
-       WHERE l.user_id = ? AND date >= date('now', '-6 days')
-       GROUP BY dayNum
-       ORDER BY dayNum`,
-      [userId]
+    // Process weekly attendance
+    const weeklyAttendanceMap = {};
+    for (const row of weeklyDataRaw) {
+      const key = row.day;
+      if (!weeklyAttendanceMap[key]) {
+        weeklyAttendanceMap[key] = { day: key, total: 0, attended: 0 };
+      }
+      weeklyAttendanceMap[key].total++;
+      if (row.attendance_status === "present") {
+        weeklyAttendanceMap[key].attended++;
+      }
+    }
+    const weeklyAttendance = Object.values(weeklyAttendanceMap).sort(
+      (a, b) => new Date(`1970-01-0${a.dayNum}`) - new Date(`1970-01-0${b.dayNum}`)
     );
 
-    // Recent assignments
+    // Assignments
     const recentAssignments = await dbAll(
-      `SELECT id, title, subject, due_date, status,
-              CASE 
-                WHEN status != 'completed' AND DATE(due_date) < DATE('now') THEN 1
-                ELSE 0
-              END AS is_overdue
+      `SELECT 
+         id, title, subject, due_date, status,
+         CASE 
+           WHEN status != 'completed' AND DATE(due_date) < DATE('now') THEN 1
+           ELSE 0
+         END AS is_overdue
        FROM assignments
        WHERE user_id = ?
        ORDER BY due_date DESC
@@ -259,21 +251,29 @@ const authenticateToken = (req, res, next) => {
       [userId]
     );
 
+    // Assignment stats
+    const assignmentStats = {
+      completed: recentAssignments.filter((a) => a.status === "completed").length,
+      pending: recentAssignments.filter((a) => a.status === "pending").length,
+    };
+
     res.json({
       lectures,
-      attendanceStats,
-      weeklyAttendance: weeklyData,
-      recentAssignments,
-      assignmentStats: {
-        completed: recentAssignments.filter((a) => a.status === "completed").length,
-        pending: recentAssignments.filter((a) => a.status === "pending").length,
+      attendanceStats: {
+        total,
+        present,
+        attendance_percentage,
       },
+      weeklyAttendance,
+      recentAssignments,
+      assignmentStats,
     });
   } catch (err) {
     console.error("❌ Dashboard error:", err);
     res.status(500).json({ error: "Failed to load dashboard" });
   }
 });
+
 
 
   app.get("/api/lectures", authenticateToken, async (req, res) => {
