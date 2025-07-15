@@ -48,32 +48,48 @@ function createApp() {
   );
 
   // Rate limiting
-  const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
-  });
-  app.use(limiter);
+  const getIP = (req) => {
+  return (
+    req.headers["x-forwarded-for"]?.split(",")[0] ||
+    req.connection?.remoteAddress ||
+    req.socket?.remoteAddress ||
+    "127.0.0.1"
+  );
+};
 
-  // Body parsing
-  app.use(express.json({ limit: "10mb" }));
-  app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+// ✅ Rate limiter with safe IP getter
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: getIP, // Safe fallback IP extraction
+});
 
-  const authenticateToken = (req, res, next) => {
-    const authHeader = req.headers["authorization"];
-    const token = authHeader && authHeader.split(" ")[1];
+app.use(limiter);
 
-    if (!token) {
-      return res.status(401).json({ error: "Access token required" });
+// ✅ Body parsing
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// ✅ JWT auth middleware
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ error: "Access token required" });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: "Invalid or expired token" });
     }
+    req.user = user;
+    next();
+  });
+};
 
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-      if (err) {
-        return res.status(403).json({ error: "Invalid or expired token" });
-      }
-      req.user = user;
-      next();
-    });
-  };
 
   // Routes...
 
