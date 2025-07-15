@@ -1,18 +1,21 @@
 import serverless from "serverless-http";
 
-// Import Turso-powered API (make sure the dist file is ESM too)
-const { default: getApp } = await import("../../server/api-netlify-turso.js");
+let cachedHandler = null;
 
-// Export the handler as an async function
 export const handler = async (event, context) => {
   try {
     console.log("🚀 Netlify function starting...");
 
-    const app = await getApp();
-    const handler = serverless(app);
+    // Initialize only once
+    if (!cachedHandler) {
+      const { default: getApp } = await import("../../server/api-netlify-turso.js");
+      const app = await getApp();
+      cachedHandler = serverless(app);
+      console.log("✅ Express app initialized and cached");
+    }
 
-    console.log("✅ Request processed successfully");
-    return handler(event, context);
+    // Reuse the cached handler
+    return await cachedHandler(event, context);
   } catch (error) {
     console.error("❌ Function error:", error);
     return {
