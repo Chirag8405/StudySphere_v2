@@ -158,6 +158,100 @@ function createApp() {
     },
   );
 
+  // GET /api/dashboard
+  app.get("/api/dashboard", authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user.userId;
+
+      // Fetch lectures with attendance stats
+      const lectures = await dbAll(
+        `SELECT l.*, 
+                COUNT(a.id) AS total_classes,
+                SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) AS attended_classes,
+                ROUND(
+                  100.0 * SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) / COUNT(a.id),
+                  0
+                ) AS attendance_percentage
+         FROM lectures l
+         LEFT JOIN attendance a ON l.id = a.lecture_id
+         WHERE l.user_id = ?
+         GROUP BY l.id
+         ORDER BY l.schedule_time ASC`,
+        [userId]
+      );
+
+      // Attendance stats
+      const stats = await dbGet(
+        `SELECT 
+          COUNT(*) AS total,
+          SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) AS present
+         FROM attendance a
+         JOIN lectures l ON a.lecture_id = l.id
+         WHERE l.user_id = ?`,
+        [userId]
+      );
+
+      const attendanceStats = {
+        total: stats.total || 0,
+        present: stats.present || 0,
+        attendance_percentage: stats.total
+          ? Math.round((stats.present / stats.total) * 100)
+          : 0,
+      };
+
+      // Weekly attendance
+      const weeklyData = await dbAll(
+        `SELECT strftime('%w', date) AS dayNum,
+                CASE strftime('%w', date)
+                    WHEN '0' THEN 'Sunday'
+                    WHEN '1' THEN 'Monday'
+                    WHEN '2' THEN 'Tuesday'
+                    WHEN '3' THEN 'Wednesday'
+                    WHEN '4' THEN 'Thursday'
+                    WHEN '5' THEN 'Friday'
+                    WHEN '6' THEN 'Saturday'
+                END AS day,
+                COUNT(*) AS total,
+                SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) AS attended
+         FROM attendance a
+         JOIN lectures l ON a.lecture_id = l.id
+         WHERE l.user_id = ? AND date >= date('now', '-6 days')
+         GROUP BY dayNum
+         ORDER BY dayNum`,
+        [userId]
+      );
+
+      // Assignments
+      const recentAssignments = await dbAll(
+        `SELECT id, title, subject, due_date, status,
+                CASE 
+                  WHEN status != 'completed' AND DATE(due_date) < DATE('now') THEN 1
+                  ELSE 0
+                END AS is_overdue
+         FROM assignments
+         WHERE user_id = ?
+         ORDER BY due_date DESC
+         LIMIT 10`,
+        [userId]
+      );
+
+      res.json({
+        lectures,
+        attendanceStats,
+        weeklyAttendance: weeklyData,
+        recentAssignments,
+        assignmentStats: {
+          completed: recentAssignments.filter((a) => a.status === "completed").length,
+          pending: recentAssignments.filter((a) => a.status === "pending").length,
+        },
+      });
+    } catch (err) {
+      console.error("❌ Dashboard error:", err);
+      res.status(500).json({ error: "Failed to load dashboard" });
+    }
+  });
+
+
   app.get("/api/lectures", authenticateToken, async (req, res) => {
     try {
       const lectures = await dbAll(
