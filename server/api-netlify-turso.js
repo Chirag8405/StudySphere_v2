@@ -176,59 +176,76 @@ const authenticateToken = (req, res, next) => {
 
   // GET /api/dashboard
   app.get("/api/dashboard", authenticateToken, async (req, res) => {
-    const schema = await dbAll(`PRAGMA table_info(lectures)`);
-console.log("🧠 lectures table schema (runtime):", schema);
   try {
     const userId = req.user.userId;
 
-    // Fetch all lectures
+    // Fetch lectures with attendance stats (explicit columns only)
     const lectures = await dbAll(
-      `SELECT *,
-              CASE 
-                WHEN attendance_status = 'present' THEN 1
-                ELSE 0
-              END AS is_present
-       FROM lectures
-       WHERE user_id = ?
-       ORDER BY date DESC, time DESC`,
+      `SELECT 
+        l.id,
+        l.user_id,
+        l.name,
+        l.subject,
+        l.date,
+        l.time,
+        l.attendance_status,
+        l.created_at,
+        COUNT(a.id) AS total_classes,
+        SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) AS attended_classes,
+        ROUND(
+          100.0 * SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) / COUNT(a.id),
+          0
+        ) AS attendance_percentage
+      FROM lectures l
+      LEFT JOIN attendance a ON l.id = a.lecture_id
+      WHERE l.user_id = ?
+      GROUP BY l.id
+      ORDER BY l.date ASC, l.time ASC`,
       [userId]
     );
 
-    // Calculate attendance stats
-    const totalLectures = lectures.length;
-    const attendedLectures = lectures.filter((l) => l.attendance_status === 'present').length;
-    const attendancePercentage = totalLectures > 0
-      ? Math.round((attendedLectures / totalLectures) * 100)
-      : 0;
+    // Attendance stats (totals)
+    const stats = await dbGet(
+      `SELECT 
+        COUNT(*) AS total,
+        SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) AS present
+      FROM attendance a
+      JOIN lectures l ON a.lecture_id = l.id
+      WHERE l.user_id = ?`,
+      [userId]
+    );
 
     const attendanceStats = {
-      total: totalLectures,
-      present: attendedLectures,
-      attendance_percentage: attendancePercentage
+      total: stats.total || 0,
+      present: stats.present || 0,
+      attendance_percentage: stats.total
+        ? Math.round((stats.present / stats.total) * 100)
+        : 0,
     };
 
-    // Weekly attendance (last 7 days)
-    const today = new Date();
-    const past7Days = [...Array(7)].map((_, i) => {
-      const date = new Date(today);
-      date.setDate(today.getDate() - i);
-      return date.toISOString().split("T")[0]; // YYYY-MM-DD
-    });
+    // Weekly attendance overview
+    const weeklyData = await dbAll(
+      `SELECT strftime('%w', date) AS dayNum,
+              CASE strftime('%w', date)
+                  WHEN '0' THEN 'Sunday'
+                  WHEN '1' THEN 'Monday'
+                  WHEN '2' THEN 'Tuesday'
+                  WHEN '3' THEN 'Wednesday'
+                  WHEN '4' THEN 'Thursday'
+                  WHEN '5' THEN 'Friday'
+                  WHEN '6' THEN 'Saturday'
+              END AS day,
+              COUNT(*) AS total,
+              SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) AS attended
+       FROM attendance a
+       JOIN lectures l ON a.lecture_id = l.id
+       WHERE l.user_id = ? AND date >= date('now', '-6 days')
+       GROUP BY dayNum
+       ORDER BY dayNum`,
+      [userId]
+    );
 
-    const weeklyAttendance = past7Days.map((dateStr) => {
-      const dayLectures = lectures.filter((l) => l.date === dateStr);
-      const attended = dayLectures.filter((l) => l.attendance_status === 'present').length;
-      const total = dayLectures.length;
-      const day = new Date(dateStr).toLocaleDateString('en-US', { weekday: 'long' });
-
-      return {
-        day,
-        total,
-        attended
-      };
-    }).reverse(); // So the week is in chronological order
-
-    // Fetch recent assignments
+    // Recent assignments
     const recentAssignments = await dbAll(
       `SELECT id, title, subject, due_date, status,
               CASE 
@@ -242,24 +259,16 @@ console.log("🧠 lectures table schema (runtime):", schema);
       [userId]
     );
 
-    // Count assignment stats
-    const completed = recentAssignments.filter((a) => a.status === 'completed').length;
-    const pending = recentAssignments.filter((a) => a.status === 'pending').length;
-
-    const assignmentStats = {
-      completed,
-      pending
-    };
-
-    // Respond with dashboard data
     res.json({
       lectures,
       attendanceStats,
-      weeklyAttendance,
+      weeklyAttendance: weeklyData,
       recentAssignments,
-      assignmentStats
+      assignmentStats: {
+        completed: recentAssignments.filter((a) => a.status === "completed").length,
+        pending: recentAssignments.filter((a) => a.status === "pending").length,
+      },
     });
-
   } catch (err) {
     console.error("❌ Dashboard error:", err);
     res.status(500).json({ error: "Failed to load dashboard" });
