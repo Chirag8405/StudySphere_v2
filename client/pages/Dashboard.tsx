@@ -134,7 +134,7 @@ export default function Dashboard() {
         ApiService.getLectures(),
       ]);
       setData(dashboardData);
-      setLectures(lecturesData.lectures);
+      setLectures(lecturesData);
     } catch (err) {
       const errorMsg =
         err instanceof Error ? err.message : "Failed to mark attendance";
