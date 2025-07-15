@@ -23,6 +23,8 @@ let initialized = false;
 function createApp() {
   const app = express();
 
+  app.set("trust proxy", true);
+
   // Security middleware
   app.use(
     helmet({
