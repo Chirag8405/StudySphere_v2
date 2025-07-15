@@ -176,6 +176,8 @@ const authenticateToken = (req, res, next) => {
 
   // GET /api/dashboard
   app.get("/api/dashboard", authenticateToken, async (req, res) => {
+    const schema = await dbAll(`PRAGMA table_info(lectures)`);
+console.log("🧠 lectures table schema (runtime):", schema);
   try {
     const userId = req.user.userId;
 
