@@ -252,6 +252,8 @@ console.log("Assignments parsed:", assignmentList);
         description: errorMsg,
         icon: <AlertTriangle className="h-4 w-4" />,
       });
+    }finally{
+      setIsLoading(False);
     }
   };
 
