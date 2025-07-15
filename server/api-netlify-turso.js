@@ -186,7 +186,7 @@ function createApp() {
           return res.status(400).json({ errors: errors.array() });
         }
 
-        const { subject, date, time } = req.body;
+        const { name, subject, date, time } = req.body;
         const result = await dbRun(
           "INSERT INTO lectures (user_id, name, subject, date, time) VALUES (?, ?, ?, ?, ?)",
           [req.user.userId, name, subject, date, time],
