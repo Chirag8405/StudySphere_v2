@@ -163,46 +163,54 @@ function createApp() {
   try {
     const userId = req.user.userId;
 
-    // Fetch all lectures for this user
+    // Fetch all lectures
     const lectures = await dbAll(
-      `SELECT id, name, subject, date, time, attendance_status
+      `SELECT *,
+              CASE 
+                WHEN attendance_status = 'present' THEN 1
+                ELSE 0
+              END AS is_present
        FROM lectures
        WHERE user_id = ?
-       ORDER BY time ASC`,
+       ORDER BY date DESC, time DESC`,
       [userId]
     );
 
-    // Attendance Stats
-    const total = lectures.length;
-    const present = lectures.filter((lec) => lec.attendance_status === "present").length;
+    // Calculate attendance stats
+    const totalLectures = lectures.length;
+    const attendedLectures = lectures.filter((l) => l.attendance_status === 'present').length;
+    const attendancePercentage = totalLectures > 0
+      ? Math.round((attendedLectures / totalLectures) * 100)
+      : 0;
 
     const attendanceStats = {
-      total,
-      present,
-      attendance_percentage: total > 0 ? Math.round((present / total) * 100) : 0,
+      total: totalLectures,
+      present: attendedLectures,
+      attendance_percentage: attendancePercentage
     };
 
-    // Weekly Attendance Summary
-    const weeklyAttendance = Array(7).fill(null).map((_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - ((date.getDay() + 7 - i) % 7));
-      const label = date.toLocaleDateString("en-US", { weekday: "long" });
-
-      const dayLectures = lectures.filter((lec) => {
-        const lecDate = new Date(lec.date);
-        return lecDate.getDay() === i;
-      });
-
-      const attended = dayLectures.filter((lec) => lec.attendance_status === "present").length;
-
-      return {
-        day: label,
-        total: dayLectures.length,
-        attended,
-      };
+    // Weekly attendance (last 7 days)
+    const today = new Date();
+    const past7Days = [...Array(7)].map((_, i) => {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      return date.toISOString().split("T")[0]; // YYYY-MM-DD
     });
 
-    // Recent Assignments
+    const weeklyAttendance = past7Days.map((dateStr) => {
+      const dayLectures = lectures.filter((l) => l.date === dateStr);
+      const attended = dayLectures.filter((l) => l.attendance_status === 'present').length;
+      const total = dayLectures.length;
+      const day = new Date(dateStr).toLocaleDateString('en-US', { weekday: 'long' });
+
+      return {
+        day,
+        total,
+        attended
+      };
+    }).reverse(); // So the week is in chronological order
+
+    // Fetch recent assignments
     const recentAssignments = await dbAll(
       `SELECT id, title, subject, due_date, status,
               CASE 
@@ -216,23 +224,30 @@ function createApp() {
       [userId]
     );
 
+    // Count assignment stats
+    const completed = recentAssignments.filter((a) => a.status === 'completed').length;
+    const pending = recentAssignments.filter((a) => a.status === 'pending').length;
+
     const assignmentStats = {
-      completed: recentAssignments.filter((a) => a.status === "completed").length,
-      pending: recentAssignments.filter((a) => a.status === "pending").length,
+      completed,
+      pending
     };
 
+    // Respond with dashboard data
     res.json({
       lectures,
       attendanceStats,
       weeklyAttendance,
       recentAssignments,
-      assignmentStats,
+      assignmentStats
     });
+
   } catch (err) {
     console.error("❌ Dashboard error:", err);
     res.status(500).json({ error: "Failed to load dashboard" });
   }
 });
+
 
   app.get("/api/lectures", authenticateToken, async (req, res) => {
     try {
