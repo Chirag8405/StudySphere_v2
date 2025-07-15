@@ -390,6 +390,127 @@ const authenticateToken = (req, res, next) => {
     },
   );
 
+    app.delete("/api/assignments/:id", authenticateToken, async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const assignment = await dbGet(
+        "SELECT * FROM assignments WHERE id = ? AND user_id = ?",
+        [id, req.user.userId],
+      );
+
+      if (!assignment) {
+        return res.status(404).json({ error: "Assignment not found" });
+      }
+
+      await dbRun("DELETE FROM assignments WHERE id = ? AND user_id = ?", [
+        id,
+        req.user.userId,
+      ]);
+
+      res.json({ message: "Assignment deleted successfully" });
+    } catch (err) {
+      console.error("Delete error:", err);
+      res.status(500).json({ error: "Server error" });
+    }
+  });
+
+  app.put(
+    "/api/assignments/:id",
+    [
+      authenticateToken,
+      body("title").optional().trim(),
+      body("description").optional(),
+      body("due_date").optional().isISO8601(),
+      body("priority").optional().isIn(["low", "medium", "high"]),
+    ],
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { title, description, due_date, priority } = req.body;
+
+        const assignment = await dbGet(
+          "SELECT * FROM assignments WHERE id = ? AND user_id = ?",
+          [id, req.user.userId],
+        );
+
+        if (!assignment) {
+          return res.status(404).json({ error: "Assignment not found" });
+        }
+
+        const updated = {
+          title: title ?? assignment.title,
+          description: description ?? assignment.description,
+          due_date: due_date ?? assignment.due_date,
+          priority: priority ?? assignment.priority,
+        };
+
+        await dbRun(
+          `UPDATE assignments
+         SET title = ?, description = ?, due_date = ?, priority = ?
+         WHERE id = ? AND user_id = ?`,
+          [
+            updated.title,
+            updated.description,
+            updated.due_date,
+            updated.priority,
+            id,
+            req.user.userId,
+          ],
+        );
+
+        const updatedAssignment = await dbGet(
+          "SELECT * FROM assignments WHERE id = ?",
+          [id],
+        );
+
+        res.json(updatedAssignment);
+      } catch (err) {
+        console.error("Update error:", err);
+        res.status(500).json({ error: "Server error" });
+      }
+    },
+  );
+
+  app.patch(
+    "/api/assignments/:id/status",
+    [
+      authenticateToken,
+      body("status").isIn(["pending", "completed", "missed"]),
+    ],
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        const assignment = await dbGet(
+          "SELECT * FROM assignments WHERE id = ? AND user_id = ?",
+          [id, req.user.userId],
+        );
+
+        if (!assignment) {
+          return res.status(404).json({ error: "Assignment not found" });
+        }
+
+        await dbRun(
+          "UPDATE assignments SET status = ? WHERE id = ? AND user_id = ?",
+          [status, id, req.user.userId],
+        );
+
+        const updatedAssignment = await dbGet(
+          "SELECT * FROM assignments WHERE id = ?",
+          [id],
+        );
+
+        res.json(updatedAssignment);
+      } catch (err) {
+        console.error("Status update error:", err);
+        res.status(500).json({ error: "Server error" });
+      }
+    },
+  );
+
+
   return app;
 }
 
