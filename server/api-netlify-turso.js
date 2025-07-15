@@ -174,6 +174,7 @@ function createApp() {
     "/api/lectures",
     [
       authenticateToken,
+      body("name").isLength({ min: 1 }).trim(),
       body("subject").isLength({ min: 1 }).trim(),
       body("date").isISO8601(),
       body("time").matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
@@ -187,8 +188,8 @@ function createApp() {
 
         const { subject, date, time } = req.body;
         const result = await dbRun(
-          "INSERT INTO lectures (user_id, subject, date, time) VALUES (?, ?, ?, ?)",
-          [req.user.userId, subject, date, time],
+          "INSERT INTO lectures (user_id, name, subject, date, time) VALUES (?, ?, ?, ?, ?)",
+          [req.user.userId, name, subject, date, time],
         );
 
         const lecture = await dbGet("SELECT * FROM lectures WHERE id = ?", [
