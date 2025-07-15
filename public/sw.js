@@ -90,17 +90,15 @@ self.addEventListener("fetch", (event) => {
 
 // Handle API requests with network-first strategy
 async function handleApiRequest(request) {
+  const cache = await caches.open(API_CACHE_NAME)
   try {
     // Try network first
     const networkResponse = await fetch(request);
 
-    if (networkResponse.ok) {
-      // Cache successful responses
-      const cache = await caches.open(API_CACHE_NAME);
-      if (request.method === "GET") {
-  await cache.put(request, response.clone());
+    if (request.method === "GET" && networkResponse.ok) {
+  cache.put(request, networkResponse.clone());
 }
-    }
+
 
     return networkResponse;
   } catch (error) {
