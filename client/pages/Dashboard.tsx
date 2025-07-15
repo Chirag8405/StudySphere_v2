@@ -53,7 +53,7 @@ export default function Dashboard() {
           ApiService.getLectures(),
         ]);
         setData(dashboardData);
-        setLectures(lecturesData.lectures);
+      setLectures(Array.isArray(lecturesData) ? lecturesData : lecturesData.lectures || []);
       } catch (err) {
         console.error("Failed to fetch dashboard data:", err);
         setError(err instanceof Error ? err.message : "Failed to load data");
