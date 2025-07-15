@@ -239,7 +239,7 @@ const authenticateToken = (req, res, next) => {
     // Assignments
     const recentAssignments = await dbAll(
       `SELECT 
-         id, title, subject, due_date, status,
+         id, title, due_date, status,
          CASE 
            WHEN status != 'completed' AND DATE(due_date) < DATE('now') THEN 1
            ELSE 0
