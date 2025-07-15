@@ -79,19 +79,21 @@ export default function Dashboard() {
     return lectures.filter((lecture) => lecture.attendance_percentage < 75);
   };
 
-  const getTodayLectures = () => {
-    const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
-    const todayLectures = lectures.filter((lecture) =>
-      lecture.schedule_days.includes(today),
-    );
+ const getTodayLectures = () => {
+  const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
+  const todayLectures = lectures.filter((lecture) =>
+    Array.isArray(lecture.schedule_days)
+      ? lecture.schedule_days.includes(today)
+      : false
+  );
 
-    // Sort by time
-    return todayLectures.sort((a, b) => {
-      const timeA = a.schedule_time.split(":").map(Number);
-      const timeB = b.schedule_time.split(":").map(Number);
-      return timeA[0] - timeB[0] || timeA[1] - timeB[1];
-    });
-  };
+  return todayLectures.sort((a, b) => {
+    const timeA = (a.schedule_time || "00:00").split(":").map(Number);
+    const timeB = (b.schedule_time || "00:00").split(":").map(Number);
+    return timeA[0] - timeB[0] || timeA[1] - timeB[1];
+  });
+};
+
 
   const formatTime = (time: string) => {
     const [hours, minutes] = time.split(":");
@@ -298,7 +300,7 @@ export default function Dashboard() {
                       <div className="space-y-1">
                         <h4 className="font-medium">{lecture.name}</h4>
                         <p className="text-sm text-muted-foreground">
-                          {lecture.subject}
+                          {(lecture.name || "").slice(0, 20)}
                         </p>
                       </div>
                       <div className="text-right">
@@ -341,7 +343,7 @@ export default function Dashboard() {
                         <div className="space-y-1 flex-1">
                           <h4 className="font-medium">{lecture.name}</h4>
                           <p className="text-sm text-muted-foreground">
-                            {lecture.subject}
+                            {(lecture.name || "").slice(0, 20)}
                           </p>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Clock className="h-3 w-3" />
