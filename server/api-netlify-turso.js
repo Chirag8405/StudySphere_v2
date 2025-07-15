@@ -274,7 +274,7 @@ function createApp() {
 
 let app = null;
 
-export default async function getApp() {
+export async function getApp() {
   if (!initialized) {
     try {
       console.log("🚀 Initializing Turso database...");
