@@ -97,7 +97,9 @@ async function handleApiRequest(request) {
     if (networkResponse.ok) {
       // Cache successful responses
       const cache = await caches.open(API_CACHE_NAME);
-      cache.put(request, networkResponse.clone());
+      if (request.method === "GET") {
+  await cache.put(request, response.clone());
+}
     }
 
     return networkResponse;
