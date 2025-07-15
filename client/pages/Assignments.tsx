@@ -94,6 +94,11 @@ export default function Assignments() {
       ? data.assignments
       : [];
 
+      console.log("Fetching assignments...");
+console.log("Fetched data:", data);
+console.log("Assignments parsed:", assignmentList);
+
+
       setAssignments(assignmentList);
 
       // Show info if no assignments found
