@@ -8,7 +8,10 @@ export const handler = async (event, context) => {
 
     // Initialize only once
     if (!cachedHandler) {
-      const { default: getApp } = await import("../../server/api-netlify-turso.js");
+      const module = await import("../../server/api-netlify-turso.js");
+      const getApp = module.getApp || module.default; 
+      if (typeof getApp !== "function") throw new Error("getApp is not a function");
+      
       const app = await getApp();
       cachedHandler = serverless(app);
       console.log("✅ Express app initialized and cached");
