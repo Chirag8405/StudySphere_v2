@@ -195,6 +195,7 @@ console.log("Assignments parsed:", assignmentList);
   };
 
   const handleCreateAssignment = async () => {
+    setIsSubmitting(true);
     try {
       if (
         !assignmentForm.title ||
@@ -228,6 +229,9 @@ console.log("Assignments parsed:", assignmentList);
         description: errorMsg,
         icon: <AlertTriangle className="h-4 w-4" />,
       });
+    }
+    finally{
+      setIsSubmitting(false);
     }
   };
 
@@ -544,8 +548,9 @@ console.log("Assignments parsed:", assignmentList);
                 <Button
                   onClick={handleCreateAssignment}
                   className="w-full text-sm"
+                  disabled={isSubmitting}
                 >
-                  Create Assignment
+                  {isSubmitting ? "Creating..." : "Create Assignment"}
                 </Button>
               </div>
             </DialogContent>
@@ -958,8 +963,8 @@ console.log("Assignments parsed:", assignmentList);
               </div>
 
               {/* Submit */}
-              <Button onClick={handleEditAssignment} className="w-full text-sm">
-                Update Assignment
+              <Button onClick={handleEditAssignment} className="w-full text-sm" disabled={isSubmitting}>
+                {isSubmitting ? "Updating…" : "Update Assignment"}
               </Button>
             </div>
           </DialogContent>
