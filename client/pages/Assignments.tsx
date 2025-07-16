@@ -944,9 +944,6 @@ console.log("Assignments parsed:", assignmentList);
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
       </div>
     </Layout>
   );
