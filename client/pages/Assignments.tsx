@@ -244,7 +244,8 @@ console.log("Assignments parsed:", assignmentList);
       setIsEditOpen(false);
       setSelectedAssignment(null);
       resetForm();
-      fetchAssignments();
+      
+      await fetchAssignments();
     } catch (err) {
       const errorMsg =
         err instanceof Error ? err.message : "Failed to update assignment";
