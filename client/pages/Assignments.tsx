@@ -832,7 +832,7 @@ console.log("Assignments parsed:", assignmentList);
         </Tabs>
 
         {/* Edit Assignment Dialog */}
-        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen} trapFocus={true} removeScroll={false}>
           <DialogContent className="mx-2 sm:mx-4 w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] max-w-sm sm:max-w-md rounded-lg">
             <DialogHeader>
               <DialogTitle className="text-base sm:text-lg">
