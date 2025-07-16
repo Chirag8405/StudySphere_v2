@@ -230,34 +230,36 @@ console.log("Assignments parsed:", assignmentList);
   };
 
   const handleEditAssignment = async () => {
-    setIsLoading(true);
-    try {
-      if (!selectedAssignment) return;
+  //   setIsLoading(true);
+  //   try {
+  //     if (!selectedAssignment) return;
 
-      await ApiService.updateAssignment(selectedAssignment.id, assignmentForm);
+  //     await ApiService.updateAssignment(selectedAssignment.id, assignmentForm);
 
-      toast.success("Assignment Updated", {
-        description: `${assignmentForm.title} has been updated successfully`,
-        icon: <Edit className="h-4 w-4" />,
-      });
+  //     toast.success("Assignment Updated", {
+  //       description: `${assignmentForm.title} has been updated successfully`,
+  //       icon: <Edit className="h-4 w-4" />,
+  //     });
 
-      setIsEditOpen(false);
-      setSelectedAssignment(null);
-      resetForm();
+  //     setIsEditOpen(false);
+  //     setSelectedAssignment(null);
+  //     resetForm();
       
-      await fetchAssignments();
-    } catch (err) {
-      const errorMsg =
-        err instanceof Error ? err.message : "Failed to update assignment";
-      setError(errorMsg);
-      toast.error("Failed to Update Assignment", {
-        description: errorMsg,
-        icon: <AlertTriangle className="h-4 w-4" />,
-      });
-    }finally{
-      setIsLoading(false);
-    }
-  };
+  //     await fetchAssignments();
+  //   } catch (err) {
+  //     const errorMsg =
+  //       err instanceof Error ? err.message : "Failed to update assignment";
+  //     setError(errorMsg);
+  //     toast.error("Failed to Update Assignment", {
+  //       description: errorMsg,
+  //       icon: <AlertTriangle className="h-4 w-4" />,
+  //     });
+  //   }finally{
+  //     setIsLoading(false);
+  //   }
+  // };
+    console.log("clicked);
+                }
 
   const handleDeleteAssignment = async (assignmentId: string) => {
     try {
