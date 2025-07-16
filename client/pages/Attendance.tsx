@@ -107,12 +107,12 @@ export default function Attendance() {
       setIsLoading(true);
       setError(null);
       await new Promise((resolve) => setTimeout(resolve, 100));
-      const [lecturesData, attendanceData] = await Promise.all([
+      const [lecturesData] = await Promise.all([
         ApiService.getLectures(),
-        ApiService.getAttendance(),
+        //ApiService.getAttendance(),
       ]);
       setLectures(lecturesData.lectures);
-      setAttendance(attendanceData.attendance);
+      //setAttendance(attendanceData.attendance);
 
       if (lecturesData.lectures.length === 0) {
         toast.info("No Lectures Found", {
