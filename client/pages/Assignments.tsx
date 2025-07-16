@@ -230,6 +230,7 @@ console.log("Assignments parsed:", assignmentList);
   };
 
   const handleEditAssignment = async () => {
+    setIsLoading(true);
     try {
       if (!selectedAssignment) return;
 
@@ -253,7 +254,7 @@ console.log("Assignments parsed:", assignmentList);
         icon: <AlertTriangle className="h-4 w-4" />,
       });
     }finally{
-      setIsLoading(False);
+      setIsLoading(false);
     }
   };
 
