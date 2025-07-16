@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -832,113 +833,120 @@ console.log("Assignments parsed:", assignmentList);
         </Tabs>
 
         {/* Edit Assignment Dialog */}
-        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen} removeScroll={false} disableOutsidePointerEvents={false} trapFocus={true}>
-          <DialogContent className="mx-2 sm:mx-4 w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] max-w-sm sm:max-w-md rounded-lg">
-            <DialogHeader>
-              <DialogTitle className="text-base sm:text-lg">
-                Edit Assignment
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3 sm:space-y-4 max-h-[70vh] overflow-y-auto">
-              <div className="space-y-2">
-                <Label htmlFor="title" className="text-sm">
-                  Title *
-                </Label>
-                <Input
-                  value={assignmentForm.title}
-                  onChange={(e) =>
-                    setAssignmentForm((prev) => ({
-                      ...prev,
-                      title: e.target.value,
-                    }))
-                  }
-                  placeholder="Assignment title"
-                  className="text-sm"
-                />
-              </div>
+        <Dialog
+      open={isEditOpen}
+      onOpenChange={setIsEditOpen}
+      removeScroll={false}
+      disableOutsidePointerEvents={false}
+      trapFocus={true}
+    >
+      <DialogTrigger asChild>
+        <Button>Edit</Button>
+      </DialogTrigger>
 
-              <div className="space-y-2">
-                <Label htmlFor="subject" className="text-sm">
-                  Subject *
-                </Label>
-                <Input
-                  value={assignmentForm.subject}
-                  onChange={(e) =>
-                    setAssignmentForm((prev) => ({
-                      ...prev,
-                      subject: e.target.value,
-                    }))
-                  }
-                  placeholder="Subject or course"
-                  className="text-sm"
-                />
-              </div>
+      <DialogContent
+        aria-labelledby="edit-assignment-title"
+        aria-describedby="edit-assignment-desc"
+        className="mx-2 sm:mx-4 w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] max-w-sm sm:max-w-md rounded-lg"
+      >
+        <DialogHeader>
+          <DialogTitle id="edit-assignment-title" className="text-base sm:text-lg">
+            Edit Assignment
+          </DialogTitle>
+          <DialogDescription id="edit-assignment-desc">
+            Update the title, subject, due date, or priority of the selected assignment.
+          </DialogDescription>
+        </DialogHeader>
 
-              <div className="space-y-2">
-                <Label htmlFor="description" className="text-sm">
-                  Description
-                </Label>
-                <Textarea
-                  value={assignmentForm.description}
-                  onChange={(e) =>
-                    setAssignmentForm((prev) => ({
-                      ...prev,
-                      description: e.target.value,
-                    }))
-                  }
-                  placeholder="Assignment description..."
-                  rows={3}
-                  className="text-sm"
-                />
-              </div>
+        <div className="space-y-3 sm:space-y-4 max-h-[70vh] overflow-y-auto">
+          {/* Title */}
+          <div className="space-y-2">
+            <Label htmlFor="title" className="text-sm">
+              Title *
+            </Label>
+            <Input
+              id="title"
+              value={assignmentForm.title}
+              onChange={handleTitleChange}
+              placeholder="Assignment title"
+              className="text-sm"
+            />
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="due_date" className="text-sm">
-                  Due Date *
-                </Label>
-                <Input
-                  type="date"
-                  value={assignmentForm.due_date}
-                  onChange={(e) =>
-                    setAssignmentForm((prev) => ({
-                      ...prev,
-                      due_date: e.target.value,
-                    }))
-                  }
-                  className="text-sm"
-                />
-              </div>
+          {/* Subject */}
+          <div className="space-y-2">
+            <Label htmlFor="subject" className="text-sm">
+              Subject *
+            </Label>
+            <Input
+              id="subject"
+              value={assignmentForm.subject}
+              onChange={handleSubjectChange}
+              placeholder="Subject or course"
+              className="text-sm"
+            />
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="priority" className="text-sm">
-                  Priority
-                </Label>
-                <Select
-                  value={assignmentForm.priority}
-                  onValueChange={(value: "low" | "medium" | "high") =>
-                    setAssignmentForm((prev) => ({
-                      ...prev,
-                      priority: value,
-                    }))
-                  }
-                >
-                  <SelectTrigger className="text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          {/* Description */}
+          <div className="space-y-2">
+            <Label htmlFor="description" className="text-sm">
+              Description
+            </Label>
+            <Textarea
+              id="description"
+              value={assignmentForm.description}
+              onChange={handleDescriptionChange}
+              placeholder="Assignment description..."
+              rows={3}
+              className="text-sm"
+            />
+          </div>
 
-              <Button onClick={handleEditAssignment} className="w-full text-sm">
-                Update Assignment
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+          {/* Due Date */}
+          <div className="space-y-2">
+            <Label htmlFor="due_date" className="text-sm">
+              Due Date *
+            </Label>
+            <Input
+              id="due_date"
+              type="date"
+              value={assignmentForm.due_date}
+              onChange={handleDueDateChange}
+              className="text-sm"
+            />
+          </div>
+
+          {/* Priority */}
+          <div className="space-y-2">
+            <Label htmlFor="priority" className="text-sm">
+              Priority
+            </Label>
+            <Select
+              id="priority"
+              value={assignmentForm.priority}
+              onValueChange={handlePriorityChange}
+            >
+              <SelectTrigger className="text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="low">Low</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Submit */}
+          <Button onClick={handleEditAssignment} className="w-full text-sm">
+            Update Assignment
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
       </div>
     </Layout>
   );
