@@ -114,7 +114,7 @@ export default function Assignments() {
     });
 
       console.log("Fetching assignments...");
-console.log("Fetched data:", data);
+console.log("Fetched data:", payload);
 console.log("Assignments parsed:", assignmentList);
 
 
