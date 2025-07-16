@@ -107,9 +107,9 @@ const AppRoutes = () => {
         path="/assignments"
         element={
          <DebugErrorBoundary>
-               <ProtectedRoot>
+               <ProtectedRoute>
                  <Assignments />
-               </ProtectedRoot>
+               </ProtectedRoute>
              </DebugErrorBoundary>
         }
       />
