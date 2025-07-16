@@ -322,4 +322,14 @@ export class ApiService {
       method: "DELETE",
     });
   }
+  
+  static async patchAssignmentStatus(
+    id: string,
+    status: "pending" | "completed" | "missed"
+  ): Promise<{ assignment: Assignment }> {
+    return this.request<{ assignment: Assignment }>(`/assignments/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+  }
 }
