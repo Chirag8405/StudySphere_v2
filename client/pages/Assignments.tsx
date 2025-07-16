@@ -57,6 +57,7 @@ export default function Assignments() {
     [],
   );
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -231,7 +232,7 @@ console.log("Assignments parsed:", assignmentList);
   };
 
   const handleEditAssignment = async () => {
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
       if (!selectedAssignment) return;
 
@@ -256,7 +257,7 @@ console.log("Assignments parsed:", assignmentList);
         icon: <AlertTriangle className="h-4 w-4" />,
       });
     }finally{
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
