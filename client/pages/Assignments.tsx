@@ -831,33 +831,80 @@ return assignment.status.toLowerCase() === activeTab;
                 })}
               </div>
             ) : (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 text-center">
-                  <BookOpen className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mb-3 sm:mb-4" />
+  <Card>
+    <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 text-center">
+      <BookOpen className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mb-3 sm:mb-4" />
+
+      {/* If truly no assignments at all, show the “create your first assignment” */}
+      {counts.all === 0 ? (
+        <>
+          <h3 className="text-sm sm:text-base lg:text-lg font-medium mb-2">
+            No assignments yet
+          </h3>
+          <p className="text-xs sm:text-sm text-muted-foreground mb-4 max-w-sm">
+            Create your first assignment to get started
+          </p>
+          <Button onClick={() => setIsCreateOpen(true)} className="w-full sm:w-auto text-sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Assignment
+          </Button>
+        </>
+      ) : (
+        // We have assignments in “All,” but none in this tab
+        (() => {
+          switch (activeTab) {
+            case "pending":
+              return (
+                <>
                   <h3 className="text-sm sm:text-base lg:text-lg font-medium mb-2">
-                    {searchTerm
-                      ? "No assignments found"
-                      : activeTab === "all"
-                        ? "No assignments yet"
-                        : `No ${activeTab} assignments`}
+                    No pending assignments
                   </h3>
                   <p className="text-xs sm:text-sm text-muted-foreground mb-4 max-w-sm">
-                    {searchTerm
-                      ? "Try adjusting your search terms"
-                      : "Create your first assignment to get started"}
+                    All caught up!
                   </p>
-                  {!searchTerm && (
-                    <Button
-                      onClick={() => setIsCreateOpen(true)}
-                      className="w-full sm:w-auto text-sm"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Assignment
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+                </>
+              );
+            case "completed":
+              return (
+                <>
+                  <h3 className="text-sm sm:text-base lg:text-lg font-medium mb-2">
+                    No completed assignments
+                  </h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-4 max-w-sm">
+                    You haven’t completed any yet.
+                  </p>
+                </>
+              );
+            case "missed":
+              return (
+                <>
+                  <h3 className="text-sm sm:text-base lg:text-lg font-medium mb-2">
+                    No missed assignments
+                  </h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-4 max-w-sm">
+                    Great job staying on track!
+                  </p>
+                </>
+              );
+            case "overdue":
+              return (
+                <>
+                  <h3 className="text-sm sm:text-base lg:text-lg font-medium mb-2 text-red-600">
+                    No overdue assignments
+                  </h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-4 max-w-sm">
+                    You’re all caught up.
+                  </p>
+                </>
+              );
+            default:
+              return null;
+          }
+        })()
+      )}
+    </CardContent>
+  </Card>
+)}
           </TabsContent>
         </Tabs>
 
