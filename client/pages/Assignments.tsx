@@ -91,23 +91,27 @@ export default function Assignments() {
     try {
       setIsLoading(true);
       setError(null);
-      const raw: Assignment[] = Array.isArray(data)
-    ? data
-    : Array.isArray(data?.assignments)
-    ? data.assignments
-    : [];
+    const payload = await ApiService.getAssignments();
+
+    const raw: Assignment[] = Array.isArray(payload)
+      ? payload
+      : Array.isArray((payload as any).assignments)
+      ? (payload as any).assignments
+      : [];
 
   const now = new Date();
-  const assignmentList = raw.map((a) => ({
-    ...a,
-    status: (a.status ?? "pending").toLowerCase() as
-      | "pending"
-      | "completed"
-      | "missed",
-    is_overdue:
-      (a.status ?? "pending") === "pending" &&
-      new Date(a.due_date) < now,
-  }));
+    const assignmentList = raw.map((a) => {
+      const status = (a.status ?? "pending").toLowerCase() as
+        | "pending"
+        | "completed"
+        | "missed";
+
+      return {
+        ...a,
+        status,
+        is_overdue: status === "pending" && new Date(a.due_date) < now,
+      };
+    });
 
       console.log("Fetching assignments...");
 console.log("Fetched data:", data);
@@ -168,7 +172,7 @@ console.log("Assignments parsed:", assignmentList);
         if (activeTab === "overdue") {
           return assignment.is_overdue;
         }
-        return assignment.status === activeTab;
+return assignment.status.toLowerCase() === activeTab;
       });
     }
 
