@@ -258,7 +258,7 @@ console.log("Assignments parsed:", assignmentList);
   //     setIsLoading(false);
   //   }
   // };
-    console.log("clicked);
+    console.log("clicked");
                 }
 
   const handleDeleteAssignment = async (assignmentId: string) => {
