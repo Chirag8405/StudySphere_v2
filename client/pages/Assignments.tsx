@@ -91,12 +91,23 @@ export default function Assignments() {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await ApiService.getAssignments();
-      const assignmentList: Assignment[] = Array.isArray(data)
-  ? data
-  : Array.isArray(data?.assignments)
+      const raw: Assignment[] = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.assignments)
     ? data.assignments
     : [];
+
+  const now = new Date();
+  const assignmentList = raw.map((a) => ({
+    ...a,
+    status: (a.status ?? "pending").toLowerCase() as
+      | "pending"
+      | "completed"
+      | "missed",
+    is_overdue:
+      (a.status ?? "pending") === "pending" &&
+      new Date(a.due_date) < now,
+  }));
 
       console.log("Fetching assignments...");
 console.log("Fetched data:", data);
