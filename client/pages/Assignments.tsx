@@ -259,6 +259,7 @@ console.log("Assignments parsed:", assignmentList);
   //   }
   // };
     console.log("clicked");
+    setIsEditOpen(false);
                 }
 
   const handleDeleteAssignment = async (assignmentId: string) => {
