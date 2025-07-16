@@ -301,7 +301,7 @@ console.log("Assignments parsed:", assignmentList);
       const assignment = assignments.find((a) => a.id === assignmentId);
       const assignmentTitle = assignment?.title || "assignment";
 
-      await ApiService.updateAssignment(assignmentId, { status });
+      await ApiService.patchAssignment(assignmentId, { status });
 
       const statusIcon =
         status === "completed"
