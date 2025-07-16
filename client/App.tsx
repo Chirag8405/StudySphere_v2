@@ -23,6 +23,13 @@ import NotFound from "./pages/NotFound";
 // PWA Components
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 
+window.addEventListener("error", (event) => {
+  console.error("🌐 Uncaught Exception:", event.error || event.message, event);
+});
+window.addEventListener("unhandledrejection", (event) => {
+  console.error("🌐 Unhandled Promise Rejection:", event.reason, event);
+});
+
 const queryClient = new QueryClient();
 
 // Protected Route Component
