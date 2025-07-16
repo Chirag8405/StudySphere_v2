@@ -2,6 +2,7 @@
 import "./lib/warning-suppression";
 import "./global.css";
 
+import DebugErrorBoundary from "@/components/DebugErrorBoundary";
 import { Toaster } from "@/components/ui/toaster";
 import { createRoot } from "react-dom/client";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -105,9 +106,11 @@ const AppRoutes = () => {
       <Route
         path="/assignments"
         element={
-          <ProtectedRoute>
-            <Assignments />
-          </ProtectedRoute>
+         <DebugErrorBoundary>
+               <ProtectedRoot>
+                 <Assignments />
+               </ProtectedRoot>
+             </DebugErrorBoundary>
         }
       />
 
