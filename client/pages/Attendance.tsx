@@ -111,10 +111,14 @@ export default function Attendance() {
         ApiService.getLectures(),
         //ApiService.getAttendance(),
       ]);
+      console.log('API Response:', lecturesData);
       setLectures(lecturesData.lectures);
       //setAttendance(attendanceData.attendance);
 
-      if (lecturesData.lectures.length === 0) {
+    const lecturesArray = lecturesData?.lectures || lecturesData || [];
+    setLectures(Array.isArray(lecturesArray) ? lecturesArray : []);
+
+      if (lecturesArray.length === 0) {
         toast.info("No Lectures Found", {
           description: "Create your first lecture to start tracking attendance",
           icon: <Users className="h-4 w-4" />,
