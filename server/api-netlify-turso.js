@@ -275,7 +275,52 @@ const authenticateToken = (req, res, next) => {
 });
 
 
+app.use((req, res, next) => {
+  console.log(`🔍 ${new Date().toISOString()} - ${req.method} ${req.path}`);
+  console.log(`🔍 Headers:`, req.headers);
+  next();
+});
 
+// Add this to see all registered routes
+app.use('/api', (req, res, next) => {
+  console.log(`🔍 API Route: ${req.method} ${req.path}`);
+  next();
+});
+
+// ============= TEST ROUTE (ADD THIS FIRST) =============
+// Add this simple test route BEFORE other routes to verify routing works
+app.get('/api/test', (req, res) => {
+  res.json({ 
+    message: 'Test route working!', 
+    timestamp: new Date().toISOString(),
+    method: req.method,
+    path: req.path
+  });
+});
+
+app.get('/api/attendance/test', (req, res) => {
+  console.log('🔍 Attendance test route hit!');
+  res.json({ 
+    message: 'Attendance routes working!',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// DEBUG ROUTE (no auth required for testing)
+app.get('/api/attendance/debug', async (req, res) => {
+  console.log('🔍 Debug route hit!');
+  try {
+    res.json({
+      message: 'Debug endpoint working!',
+      timestamp: new Date().toISOString(),
+      server: 'Express with Turso',
+      routes: 'Attendance routes loaded'
+    });
+  } catch (err) {
+    console.error('❌ Debug error:', err);
+    res.json({ error: err.message });
+  }
+});
   app.get("/api/lectures", authenticateToken, async (req, res) => {
     try {
       const lectures = await dbAll(
