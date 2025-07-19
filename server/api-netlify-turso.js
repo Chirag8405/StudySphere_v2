@@ -339,7 +339,7 @@ app.get('/api/attendance/debug', async (req, res) => {
       authenticateToken,
       body("name").isLength({ min: 1 }).trim(),
       body("subject").isLength({ min: 1 }).trim(),
-      body("date").isISO8601(),
+      body("date").isArray().optional(),
       body("time").matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
     ],
     async (req, res) => {
@@ -351,9 +351,15 @@ app.get('/api/attendance/debug', async (req, res) => {
 
         const { name, subject, date, time } = req.body;
         const result = await dbRun(
-          "INSERT INTO lectures (user_id, name, subject, date, time) VALUES (?, ?, ?, ?, ?)",
-          [req.user.userId, name, subject, date, time],
-        );
+  "INSERT INTO lectures (user_id, name, subject, date, time) VALUES (?, ?, ?, ?, ?)",
+  [
+    req.user.userId,
+    name,
+    subject,
+    JSON.stringify(date),
+    time,
+  ]
+);
 
         const lecture = await dbGet("SELECT * FROM lectures WHERE id = ?", [
           result.lastInsertRowid,
