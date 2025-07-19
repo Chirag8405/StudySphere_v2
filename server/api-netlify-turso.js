@@ -363,7 +363,7 @@ app.get('/api/attendance/debug', async (req, res) => {
     req.user.userId,
     name,
     subject,
-    JSON.stringify(schedule_days),
+    JSON.stringify(date),
     time,
   ]
 );
