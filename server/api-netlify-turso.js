@@ -371,7 +371,7 @@ app.get('/api/attendance/debug', async (req, res) => {
         const lecture = await dbGet("SELECT * FROM lectures WHERE id = ?", [
           result.lastInsertRowid,
         ]);
-
+        lecture.date = JSON.parse(lecture.date);
         res.status(201).json(lecture);
       } catch {
         res.status(500).json({ error: "Server error" });
