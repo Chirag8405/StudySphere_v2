@@ -358,6 +358,219 @@ const authenticateToken = (req, res, next) => {
     }
   });
 
+  app.get("/api/attendance", authenticateToken, async (req, res) => {
+  try {
+    const attendance = await dbAll(
+      `SELECT 
+         l.id,
+         l.name,
+         l.subject,
+         l.date,
+         l.time,
+         l.attendance_status,
+         l.created_at
+       FROM lectures l
+       WHERE l.user_id = ?
+       ORDER BY l.date DESC, l.time DESC`,
+      [req.user.userId]
+    );
+    res.json(attendance);
+  } catch (err) {
+    console.error("Get attendance error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// GET /api/attendance/stats - Get attendance statistics
+app.get("/api/attendance/stats", authenticateToken, async (req, res) => {
+  try {
+    const stats = await dbAll(
+      `SELECT 
+         attendance_status,
+         COUNT(*) as count
+       FROM lectures
+       WHERE user_id = ?
+       GROUP BY attendance_status`,
+      [req.user.userId]
+    );
+
+    const total = await dbGet(
+      "SELECT COUNT(*) as total FROM lectures WHERE user_id = ?",
+      [req.user.userId]
+    );
+
+    // Process stats
+    const present = stats.find(s => s.attendance_status === 'present')?.count || 0;
+    const absent = stats.find(s => s.attendance_status === 'absent')?.count || 0;
+    const totalCount = total.total || 0;
+    const attendance_percentage = totalCount > 0 ? Math.round((present / totalCount) * 100) : 0;
+
+    res.json({
+      total: totalCount,
+      present,
+      absent,
+      attendance_percentage
+    });
+  } catch (err) {
+    console.error("Get attendance stats error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// GET /api/attendance/weekly - Get weekly attendance data
+app.get("/api/attendance/weekly", authenticateToken, async (req, res) => {
+  try {
+    const weeklyData = await dbAll(
+      `SELECT 
+         strftime('%w', date) AS dayNum,
+         CASE strftime('%w', date)
+             WHEN '0' THEN 'Sunday'
+             WHEN '1' THEN 'Monday'
+             WHEN '2' THEN 'Tuesday'
+             WHEN '3' THEN 'Wednesday'
+             WHEN '4' THEN 'Thursday'
+             WHEN '5' THEN 'Friday'
+             WHEN '6' THEN 'Saturday'
+         END AS day,
+         attendance_status,
+         COUNT(*) as count
+       FROM lectures
+       WHERE user_id = ? AND date >= date('now', '-6 days')
+       GROUP BY strftime('%w', date), day, attendance_status
+       ORDER BY dayNum`,
+      [req.user.userId]
+    );
+
+    // Process weekly data
+    const weeklyAttendance = {};
+    for (const row of weeklyData) {
+      const key = row.day;
+      if (!weeklyAttendance[key]) {
+        weeklyAttendance[key] = {
+          day: key,
+          total: 0,
+          attended: 0,
+          dayNum: parseInt(row.dayNum)
+        };
+      }
+      weeklyAttendance[key].total += row.count;
+      if (row.attendance_status === 'present') {
+        weeklyAttendance[key].attended += row.count;
+      }
+    }
+
+    // Convert to array and sort by day
+    const result = Object.values(weeklyAttendance).sort((a, b) => a.dayNum - b.dayNum);
+
+    res.json(result);
+  } catch (err) {
+    console.error("Get weekly attendance error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// POST /api/attendance - Create new attendance record (lecture with attendance)
+app.post(
+  "/api/attendance",
+  [
+    authenticateToken,
+    body("name").isLength({ min: 1 }).trim(),
+    body("subject").isLength({ min: 1 }).trim(),
+    body("date").isISO8601(),
+    body("time").matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
+    body("attendance_status").isIn(['present', 'absent']).optional()
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const { name, subject, date, time, attendance_status = 'present' } = req.body;
+      
+      const result = await dbRun(
+        "INSERT INTO lectures (user_id, name, subject, date, time, attendance_status) VALUES (?, ?, ?, ?, ?, ?)",
+        [req.user.userId, name, subject, date, time, attendance_status]
+      );
+
+      const attendance = await dbGet(
+        "SELECT * FROM lectures WHERE id = ?",
+        [result.lastInsertRowid]
+      );
+
+      res.status(201).json(attendance);
+    } catch (err) {
+      console.error("Create attendance error:", err);
+      res.status(500).json({ error: "Server error" });
+    }
+  }
+);
+
+// PUT /api/attendance/:id - Update attendance status
+app.put("/api/attendance/:id", authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { attendance_status } = req.body;
+
+    // Validate attendance_status
+    if (!['present', 'absent'].includes(attendance_status)) {
+      return res.status(400).json({ error: "Invalid attendance status" });
+    }
+
+    const lecture = await dbGet(
+      "SELECT * FROM lectures WHERE id = ? AND user_id = ?",
+      [id, req.user.userId]
+    );
+
+    if (!lecture) {
+      return res.status(404).json({ error: "Attendance record not found" });
+    }
+
+    await dbRun(
+      "UPDATE lectures SET attendance_status = ? WHERE id = ? AND user_id = ?",
+      [attendance_status, id, req.user.userId]
+    );
+
+    const updatedAttendance = await dbGet(
+      "SELECT * FROM lectures WHERE id = ? AND user_id = ?",
+      [id, req.user.userId]
+    );
+
+    res.json(updatedAttendance);
+  } catch (err) {
+    console.error("Update attendance error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// DELETE /api/attendance/:id - Delete attendance record
+app.delete("/api/attendance/:id", authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const attendance = await dbGet(
+      "SELECT * FROM lectures WHERE id = ? AND user_id = ?",
+      [id, req.user.userId]
+    );
+
+    if (!attendance) {
+      return res.status(404).json({ error: "Attendance record not found" });
+    }
+
+    await dbRun(
+      "DELETE FROM lectures WHERE id = ? AND user_id = ?",
+      [id, req.user.userId]
+    );
+
+    res.json({ message: "Attendance record deleted successfully" });
+  } catch (err) {
+    console.error("Delete attendance error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
   app.post(
     "/api/assignments",
     [
