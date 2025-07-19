@@ -888,7 +888,7 @@ export default function Attendance() {
                         <div className="flex items-center text-sm text-muted-foreground">
                           <Clock className="h-4 w-4 mr-1" />
                           {lecture.schedule_time} •{" "}
-                          {lecture.schedule_days.join(", ")}
+                            {lecture.schedule_days?.join(", ") || "No days scheduled"}
                         </div>
                       </div>
                     </CardHeader>
