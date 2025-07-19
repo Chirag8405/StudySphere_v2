@@ -109,11 +109,11 @@ export default function Attendance() {
       await new Promise((resolve) => setTimeout(resolve, 100));
       const [lecturesData] = await Promise.all([
         ApiService.getLectures(),
-        //ApiService.getAttendance(),
+        ApiService.getAttendance(),
       ]);
       console.log('API Response:', lecturesData);
       setLectures(lecturesData.lectures);
-      //setAttendance(attendanceData.attendance);
+      setAttendance(attendanceData.attendance);
 
     const lecturesArray = lecturesData?.lectures || lecturesData || [];
     setLectures(Array.isArray(lecturesArray) ? lecturesArray : []);
@@ -362,7 +362,7 @@ export default function Attendance() {
   };
 
   const getLectureAttendance = (lectureId: string) => {
-    return attendance.filter((a) => a.lecture_id === lectureId);
+    return attendance?.filter((a) => a.lecture_id === lectureId) || [];
   };
 
   const getStatusColor = (status: string) => {
