@@ -112,9 +112,10 @@ export default function Attendance() {
         ApiService.getAttendance(),
       ]);
       console.log('API Response:', lecturesData);
-      setLectures(lecturesData.lectures);
-      setAttendance(attendanceData.attendance);
+      setLectures(lecturesData.lectures || lecturesData || []);
+      setAttendance(attendanceData.attendance || attendanceData || []);
 
+      
     const lecturesArray = lecturesData?.lectures || lecturesData || [];
     setLectures(Array.isArray(lecturesArray) ? lecturesArray : []);
 
