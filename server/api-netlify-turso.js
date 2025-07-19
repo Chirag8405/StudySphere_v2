@@ -620,6 +620,22 @@ app.delete("/api/attendance/:id", authenticateToken, async (req, res) => {
   }
 });
 
+  app.get("/api/attendance/debug", authenticateToken, async (req, res) => {
+  try {
+    const allData = {
+      attendance: await dbAll("SELECT * FROM lectures WHERE user_id = ? ORDER BY date DESC", [req.user.userId]),
+      stats: await dbAll("SELECT attendance_status, COUNT(*) as count FROM lectures WHERE user_id = ? GROUP BY attendance_status", [req.user.userId]),
+      user: req.user
+    };
+    
+    console.log("🐛 DEBUG - All attendance data:", JSON.stringify(allData, null, 2));
+    res.json(allData);
+  } catch (err) {
+    console.error("❌ Debug error:", err);
+    res.json({ error: err.message, stack: err.stack });
+  }
+});
+
 
   app.post(
     "/api/assignments",
