@@ -107,11 +107,11 @@ export default function Attendance() {
       setIsLoading(true);
       setError(null);
       await new Promise((resolve) => setTimeout(resolve, 100));
-      const [lecturesData] = await Promise.all([
+      const [lecturesData, attendanceData] = await Promise.all([
         ApiService.getLectures(),
         ApiService.getAttendance(),
       ]);
-      console.log('API Response:', lecturesData);
+      console.log("API Response:", lecturesData, attendanceData);
       setLectures(lecturesData.lectures || lecturesData || []);
       setAttendance(attendanceData.attendance || attendanceData || []);
 
