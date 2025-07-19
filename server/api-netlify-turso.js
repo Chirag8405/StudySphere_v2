@@ -350,6 +350,13 @@ app.get('/api/attendance/debug', async (req, res) => {
         }
 
         const { name, subject, schedule_days: date, schedule_time: time } = req.body;
+        console.log("Payload for DB:", {
+  userId: req.user.userId,
+  name,
+  subject,
+  date,
+  time,
+});
         const result = await dbRun(
   "INSERT INTO lectures (user_id, name, subject, date, time) VALUES (?, ?, ?, ?, ?)",
   [
