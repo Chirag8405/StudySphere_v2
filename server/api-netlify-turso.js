@@ -372,6 +372,8 @@ app.get('/api/attendance/debug', async (req, res) => {
           result.lastInsertRowid,
         ]);
         lecture.date = JSON.parse(lecture.date);
+        lecture.schedule_days = lecture.date;
+delete lecture.date;
         res.status(201).json(lecture);
       } catch {
         res.status(500).json({ error: "Server error" });
