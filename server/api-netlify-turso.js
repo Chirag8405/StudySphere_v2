@@ -374,7 +374,8 @@ const authenticateToken = (req, res, next) => {
        ORDER BY l.date DESC, l.time DESC`,
       [req.user.userId]
     );
-    res.json(attendance);
+    const result = Array.isArray(attendance) ? attendance : [];
+    res.json(result);
   } catch (err) {
     console.error("Get attendance error:", err);
     res.status(500).json({ error: "Server error" });
@@ -405,21 +406,40 @@ app.get("/api/attendance/stats", authenticateToken, async (req, res) => {
     const totalCount = total.total || 0;
     const attendance_percentage = totalCount > 0 ? Math.round((present / totalCount) * 100) : 0;
 
-    res.json({
+    const result = {
       total: totalCount,
       present,
       absent,
-      attendance_percentage
-    });
+      attendance_percentage,
+      stats: stats || [], 
+      breakdown: {
+        present,
+        absent,
+        total: totalCount
+      }
+    };
+    
+    res.json(result);
   } catch (err) {
-    console.error("Get attendance stats error:", err);
-    res.status(500).json({ error: "Server error" });
+    console.error("❌ Get attendance stats error:", err);
+    res.status(500).json({ 
+      error: "Server error", 
+      details: err.message,
+      total: 0,
+      present: 0,
+      absent: 0,
+      attendance_percentage: 0,
+      stats: [],
+      breakdown: { present: 0, absent: 0, total: 0 }
+    });
   }
 });
 
 // GET /api/attendance/weekly - Get weekly attendance data
 app.get("/api/attendance/weekly", authenticateToken, async (req, res) => {
   try {
+    console.log("🔍 GET /api/attendance/weekly called for user:", req.user.userId);
+    
     const weeklyData = await dbAll(
       `SELECT 
          strftime('%w', date) AS dayNum,
@@ -441,8 +461,23 @@ app.get("/api/attendance/weekly", authenticateToken, async (req, res) => {
       [req.user.userId]
     );
 
-    // Process weekly data
+    console.log("📊 Raw weekly data:", weeklyData);
+
+    // Process weekly data with safe defaults
     const weeklyAttendance = {};
+    const defaultDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    
+    // Initialize all days with default values
+    defaultDays.forEach((day, index) => {
+      weeklyAttendance[day] = {
+        day: day,
+        total: 0,
+        attended: 0,
+        dayNum: index
+      };
+    });
+
+    // Populate with actual data
     for (const row of weeklyData) {
       const key = row.day;
       if (!weeklyAttendance[key]) {
@@ -461,13 +496,28 @@ app.get("/api/attendance/weekly", authenticateToken, async (req, res) => {
 
     // Convert to array and sort by day
     const result = Object.values(weeklyAttendance).sort((a, b) => a.dayNum - b.dayNum);
-
+    
+    console.log("📊 Final weekly result:", result);
     res.json(result);
   } catch (err) {
-    console.error("Get weekly attendance error:", err);
-    res.status(500).json({ error: "Server error" });
+    console.error("❌ Get weekly attendance error:", err);
+    // Return safe fallback array
+    const defaultWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+      .map((day, index) => ({
+        day,
+        total: 0,
+        attended: 0,
+        dayNum: index
+      }));
+    
+    res.status(500).json({ 
+      error: "Server error", 
+      details: err.message,
+      data: defaultWeek // Safe fallback
+    });
   }
 });
+
 
 // POST /api/attendance - Create new attendance record (lecture with attendance)
 app.post(
