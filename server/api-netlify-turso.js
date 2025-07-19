@@ -340,7 +340,7 @@ app.get('/api/attendance/debug', async (req, res) => {
       body("name").isLength({ min: 1 }).trim(),
       body("subject").isLength({ min: 1 }).trim(),
       body("schedule_days").isArray({ min: 1 }).withMessage("At least one day required"),
-      body("time").matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage("Invalid time format"),
+      body("schedule_time").matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage("Invalid time format"),
     ],
     async (req, res) => {
       try {
@@ -349,7 +349,7 @@ app.get('/api/attendance/debug', async (req, res) => {
           return res.status(400).json({ errors: errors.array() });
         }
 
-        const { name, subject, date, time } = req.body;
+        const { name, subject, schedule_days: date, schedule_time: time } = req.body;
         const result = await dbRun(
   "INSERT INTO lectures (user_id, name, subject, date, time) VALUES (?, ?, ?, ?, ?)",
   [
