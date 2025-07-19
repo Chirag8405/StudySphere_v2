@@ -339,8 +339,8 @@ app.get('/api/attendance/debug', async (req, res) => {
       authenticateToken,
       body("name").isLength({ min: 1 }).trim(),
       body("subject").isLength({ min: 1 }).trim(),
-      body("date").isArray().optional(),
-      body("time").matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
+      body("schedule_days").isArray({ min: 1 }).withMessage("At least one day required"),
+      body("time").matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage("Invalid time format"),
     ],
     async (req, res) => {
       try {
@@ -356,7 +356,7 @@ app.get('/api/attendance/debug', async (req, res) => {
     req.user.userId,
     name,
     subject,
-    JSON.stringify(date),
+    JSON.stringify(schedule_days),
     time,
   ]
 );
