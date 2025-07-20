@@ -332,6 +332,7 @@ app.get('/api/attendance/debug', async (req, res) => {
 
   
   app.get("/api/lectures", authenticateToken, async (req, res) => {
+    try{
    const rows = await dbAll(
      `SELECT
         id,
@@ -365,9 +366,10 @@ app.get('/api/attendance/debug', async (req, res) => {
      };
    });
       res.json(lectures);
-    } catch {
-      res.status(500).json({ error: "Server error" });
-    }
+    }  catch (err) {
+    console.error("Error in GET /api/lectures:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
   });
 
   app.post(
