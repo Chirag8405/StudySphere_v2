@@ -663,7 +663,7 @@ app.put("/api/attendance/:id", authenticateToken, async (req, res) => {
     const { attendance_status } = req.body;
 
     // Validate attendance_status
-    if (!['present', 'absent'].includes(attendance_status)) {
+    if (!['present', 'absent', 'cancelled'].includes(attendance_status)) {
       return res.status(400).json({ error: "Invalid attendance status" });
     }
 
