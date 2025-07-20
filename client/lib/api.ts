@@ -263,7 +263,7 @@ export class ApiService {
     });
   }
 
-  static async updateAttendance(
+  static async markAttendance(
     id: string,
     status: "present" | "absent" | "cancelled",
   ): Promise<{ attendance: AttendanceRecord }> {
