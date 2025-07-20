@@ -195,6 +195,14 @@ const authenticateToken = (req, res, next) => {
        ORDER BY date ASC, time ASC`,
       [userId]
     );
+    lectures.forEach((lecture) => {
+  try {
+    lecture.schedule_days = JSON.parse(lecture.date);
+  } catch {
+    lecture.schedule_days = [];
+  }
+  delete lecture.date; // optional: remove raw date string to avoid confusion
+});
 
     // Calculate attendance stats manually
     const total = lectures.length;
