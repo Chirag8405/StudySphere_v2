@@ -329,12 +329,41 @@ app.get('/api/attendance/debug', async (req, res) => {
     res.json({ error: err.message });
   }
 });
+
+  
   app.get("/api/lectures", authenticateToken, async (req, res) => {
-    try {
-      const lectures = await dbAll(
-        "SELECT * FROM lectures WHERE user_id = ? ORDER BY date DESC, time DESC",
-        [req.user.userId],
-      );
+   const rows = await dbAll(
+     `SELECT
+        id,
+        name,
+        subject,
+        date      AS schedule_days,  
+        time      AS schedule_time,
+        attendance_status,
+        created_at
+      FROM lectures
+      WHERE user_id = ?
+      ORDER BY date DESC, time DESC`,
+     [req.user.userId]
+   );
+
+    const lectures = rows.map(r => {
+     let days = [];
+     try {
+       days = JSON.parse(r.schedule_days);
+     } catch (_) {
+     }
+
+     return {
+       id:                    r.id,
+       name:                  r.name,
+       subject:               r.subject,
+       schedule_days:         days,
+       schedule_time:         r.schedule_time,
+       attendance_status:     r.attendance_status,
+       created_at:            r.created_at
+     };
+   });
       res.json(lectures);
     } catch {
       res.status(500).json({ error: "Server error" });
