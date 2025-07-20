@@ -88,8 +88,8 @@ export default function Dashboard() {
   );
 
   return todayLectures.sort((a, b) => {
-    const timeA = (a.schedule_time || "00:00").split(":").map(Number);
-    const timeB = (b.schedule_time || "00:00").split(":").map(Number);
+    const timeA = (a.schedule_time || "00:00").split(":")?.map(Number);
+    const timeB = (b.schedule_time || "00:00").split(":")?.map(Number);
     return timeA[0] - timeB[0] || timeA[1] - timeB[1];
   });
 };
@@ -155,12 +155,12 @@ export default function Dashboard() {
           <div className="animate-pulse space-y-4">
             <div className="h-8 bg-muted rounded w-1/3"></div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {[...Array(4)].map((_, i) => (
+              {[...Array(4)]?.map((_, i) => (
                 <div key={i} className="h-32 bg-muted rounded"></div>
               ))}
             </div>
             <div className="grid gap-6 md:grid-cols-2">
-              {[...Array(2)].map((_, i) => (
+              {[...Array(2)]?.map((_, i) => (
                 <div key={i} className="h-64 bg-muted rounded"></div>
               ))}
             </div>
@@ -292,7 +292,7 @@ export default function Dashboard() {
             <CardContent>
               {lowAttendanceLectures.length > 0 ? (
                 <div className="space-y-3">
-                  {lowAttendanceLectures.map((lecture) => (
+                  {lowAttendanceLectures?.map((lecture) => (
                     <div
                       key={lecture.id}
                       className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
@@ -300,7 +300,7 @@ export default function Dashboard() {
                       <div className="space-y-1">
                         <h4 className="font-medium">{lecture.name}</h4>
                         <p className="text-sm text-muted-foreground">
-                          {(lecture.name || "").slice(0, 20)}
+                          {(lecture.name || "")?.slice(0, 20)}
                         </p>
                       </div>
                       <div className="text-right">
@@ -335,7 +335,7 @@ export default function Dashboard() {
               <div className="h-64 overflow-y-auto scrollbar-hide">
                 {todayLectures.length > 0 ? (
                   <div className="space-y-3">
-                    {todayLectures.map((lecture) => (
+                    {todayLectures?.map((lecture) => (
                       <div
                         key={lecture.id}
                         className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
@@ -343,7 +343,7 @@ export default function Dashboard() {
                         <div className="space-y-1 flex-1">
                           <h4 className="font-medium">{lecture.name}</h4>
                           <p className="text-sm text-muted-foreground">
-                            {(lecture.name || "").slice(0, 20)}
+                            {(lecture.name || "")?.slice(0, 20)}
                           </p>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Clock className="h-3 w-3" />
@@ -427,7 +427,7 @@ export default function Dashboard() {
               <div className="space-y-4">
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart
-                    data={data.weeklyAttendance.map((item) => ({
+                    data={data.weeklyAttendance?.map((item) => ({
                       ...item,
                       attendanceRate:
                         item.total > 0
@@ -482,7 +482,7 @@ export default function Dashboard() {
 
                 {/* Weekly Summary */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
-                  {data.weeklyAttendance.map((day) => {
+                  {data.weeklyAttendance?.map((day) => {
                     const attendanceRate =
                       day.total > 0
                         ? Math.round((day.attended / day.total) * 100)
@@ -490,7 +490,7 @@ export default function Dashboard() {
                     return (
                       <div key={day.day} className="text-center space-y-1">
                         <p className="text-sm font-medium text-muted-foreground">
-                          {day.day.slice(0, 3)}
+                          {day.day?.slice(0, 3)}
                         </p>
                         <div className="flex flex-col items-center gap-1">
                           <Badge
@@ -539,7 +539,7 @@ export default function Dashboard() {
           <CardContent>
             {data.recentAssignments.length > 0 ? (
               <div className="space-y-4">
-                {data.recentAssignments.slice(0, 6).map((assignment) => (
+                {data.recentAssignments?.slice(0, 6)?.map((assignment) => (
                   <div
                     key={assignment.id}
                     className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
