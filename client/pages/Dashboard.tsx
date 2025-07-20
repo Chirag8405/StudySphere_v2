@@ -112,11 +112,7 @@ export default function Dashboard() {
       const lectureName = lecture?.name || "lecture";
 
       const today = format(new Date(), "yyyy-MM-dd");
-      await ApiService.createAttendance({
-        lecture_id: lectureId,
-        date: today,
-        status: status,
-      });
+      await ApiService.markAttendance(lectureId, status);
 
       const statusIcon =
         status === "present"
