@@ -269,7 +269,7 @@ export class ApiService {
   ): Promise<{ attendance: AttendanceRecord }> {
     return this.request<{ attendance: AttendanceRecord }>(`/attendance/${id}`, {
       method: "PUT",
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ attendance_status: status }),
     });
   }
 
