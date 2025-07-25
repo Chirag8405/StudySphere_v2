@@ -694,7 +694,7 @@ app.put("/api/attendance/:id", authenticateToken, async (req, res) => {
 });
 
 // DELETE /api/attendance/:id - Delete attendance record
-app.delete("/api/attendance/:id", authenticateToken, async (req, res) => {
+app.delete("/api/lectures/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
