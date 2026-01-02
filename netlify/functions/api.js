@@ -390,6 +390,7 @@ app.delete("/api/assignments/:id", authenticateToken, (req, res) => {
 // Dashboard Route
 app.get("/api/dashboard", authenticateToken, (req, res) => {
   const userId = req.user.userId;
+  const user = db.users.find(u => u.id === userId);
 
   // Get user's lectures
   const userLectures = db.lectures.filter(l => l.user_id === userId);
@@ -405,38 +406,73 @@ app.get("/api/dashboard", authenticateToken, (req, res) => {
   const attendedClasses = userAttendance.filter(a => a.status === "present").length;
   const absentClasses = userAttendance.filter(a => a.status === "absent").length;
   const cancelledClasses = userAttendance.filter(a => a.status === "cancelled").length;
-  const attendancePercentage = totalClasses > 0 
-    ? Math.round((attendedClasses / (totalClasses - cancelledClasses)) * 100) || 0
+  const effectiveClasses = totalClasses - cancelledClasses;
+  const attendancePercentage = effectiveClasses > 0 
+    ? Math.round((attendedClasses / effectiveClasses) * 100)
     : 0;
+
+  // Calculate classes needed to reach 75%
+  let classesToReach75 = 0;
+  if (attendancePercentage < 75 && effectiveClasses > 0) {
+    // Formula: (attended + x) / (effective + x) >= 0.75
+    // x = (0.75 * effective - attended) / 0.25
+    classesToReach75 = Math.ceil((0.75 * effectiveClasses - attendedClasses) / 0.25);
+  }
 
   // Calculate assignment stats
   const totalAssignments = userAssignments.length;
   const completedAssignments = userAssignments.filter(a => a.status === "completed").length;
   const pendingAssignments = userAssignments.filter(a => a.status === "pending").length;
+  const missedAssignments = userAssignments.filter(a => a.status === "missed").length;
   const overdueAssignments = userAssignments.filter(a => {
     return a.status === "pending" && new Date(a.due_date) < new Date();
   }).length;
 
+  // Build weekly attendance data (last 7 days)
+  const weeklyAttendance = [];
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().split("T")[0];
+    const dayAttendance = userAttendance.filter(a => a.date === dateStr);
+    weeklyAttendance.push({
+      day: dayNames[date.getDay()],
+      attended: dayAttendance.filter(a => a.status === "present").length,
+      total: dayAttendance.length
+    });
+  }
+
+  // Build attendance data for pie chart
+  const attendanceData = [
+    { name: "Present", value: attendedClasses, color: "#22c55e" },
+    { name: "Absent", value: absentClasses, color: "#ef4444" },
+    { name: "Cancelled", value: cancelledClasses, color: "#6b7280" }
+  ];
+
   res.json({
-    attendance: {
+    user: user ? { id: user.id, name: user.name, email: user.email } : null,
+    attendanceStats: {
       total_classes: totalClasses,
       attended_classes: attendedClasses,
       absent_classes: absentClasses,
       cancelled_classes: cancelledClasses,
-      attendance_percentage: attendancePercentage
+      attendance_percentage: attendancePercentage,
+      classes_to_75_percent: classesToReach75
     },
-    assignments: {
+    attendanceData,
+    weeklyAttendance,
+    assignmentStats: {
       total: totalAssignments,
       completed: completedAssignments,
       pending: pendingAssignments,
+      missed: missedAssignments,
       overdue: overdueAssignments
     },
-    lectures: userLectures.length,
-    recent_attendance: userAttendance.slice(-10).reverse(),
-    upcoming_assignments: userAssignments
-      .filter(a => a.status === "pending")
-      .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
-      .slice(0, 5)
+    recentAssignments: userAssignments
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 5),
+    totalLectures: userLectures.length
   });
 });
 
