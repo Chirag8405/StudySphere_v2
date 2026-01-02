@@ -58,9 +58,6 @@ Thumbs.db
 server/utils/jwt.ts
 server/routes/demo.ts
 
-# Generated files in netlify functions
-netlify/functions/*.js
-
 # Misc
 production-checklist.md
 AGENTS.md
