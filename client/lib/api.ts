@@ -7,11 +7,6 @@ export interface User {
   email: string;
 }
 
-export interface LoginResponse {
-  user: User;
-  token: string;
-}
-
 export interface Assignment {
   id: string;
   title: string;
@@ -108,7 +103,6 @@ export class ApiService {
           error: "Unknown server error",
         }));
 
-        // Enhanced error messages based on status codes
         let errorMessage = errorData.error || `HTTP ${response.status}`;
 
         switch (response.status) {
@@ -146,47 +140,31 @@ export class ApiService {
 
       return response.json();
     } catch (error) {
-      // Handle network errors
       if (error instanceof TypeError && error.message.includes("fetch")) {
         throw new Error(
           "Unable to connect to server. Please check your internet connection.",
         );
       }
-
-      // Re-throw other errors
       throw error;
     }
   }
 
-  // Auth
-  static async login(email: string, password: string): Promise<LoginResponse> {
-    const response = await this.request<LoginResponse>("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    });
+  // ──────── Auth ────────
+  // Login is now handled client-side via Firebase Auth SDK (see auth-context).
+  // The server only needs a profile-creation call after signup.
 
-    // Store token
-    localStorage.setItem("studySphere_token", response.token);
-    localStorage.setItem("studySphere_user", JSON.stringify(response.user));
-
-    return response;
-  }
-
-  static async register(
+  /**
+   * Called after the client creates a Firebase Auth user to ensure
+   * a Firestore profile document exists on the server.
+   */
+  static async registerProfile(
     name: string,
     email: string,
-    password: string,
-  ): Promise<LoginResponse> {
-    const response = await this.request<LoginResponse>("/auth/register", {
+  ): Promise<{ user: User }> {
+    return this.request<{ user: User }>("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, email }),
     });
-
-    // Store token
-    localStorage.setItem("studySphere_token", response.token);
-    localStorage.setItem("studySphere_user", JSON.stringify(response.user));
-
-    return response;
   }
 
   static async getProfile(): Promise<{ user: User }> {
@@ -195,7 +173,6 @@ export class ApiService {
 
   static logout(): void {
     localStorage.removeItem("studySphere_token");
-    localStorage.removeItem("studySphere_user");
   }
 
   // Dashboard

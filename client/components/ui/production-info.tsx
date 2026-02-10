@@ -37,8 +37,7 @@ export const ProductionInfo: React.FC = () => {
               Production Mode Active
             </h3>
             <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-              Demo data has been removed. Create your account to start tracking
-              your academic progress!
+              Create your account to start tracking your academic progress!
             </p>
             <div className="flex gap-2 mt-3">
               <Button

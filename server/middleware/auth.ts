@@ -1,7 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { verifyToken } from "../utils/jwt-secure.js";
-import { UserModel } from "../models/User.js";
-import DatabaseSecurity from "../utils/database-security.js";
+import { adminAuth, adminDb } from "../config/firebase-admin.js";
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -11,6 +9,11 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
+/**
+ * Middleware that verifies the Firebase ID token sent in the
+ * Authorization header (Bearer <token>) and attaches the user
+ * profile to `req.user`.
+ */
 export async function authenticateToken(
   req: AuthenticatedRequest,
   res: Response,
@@ -19,62 +22,39 @@ export async function authenticateToken(
   try {
     const authHeader = req.headers.authorization;
 
-    // Validate authorization header format
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       res.status(401).json({ error: "Invalid authorization header format" });
       return;
     }
 
-    const token = authHeader.split(" ")[1];
+    const idToken = authHeader.split(" ")[1];
 
-    if (!token) {
+    if (!idToken) {
       res.status(401).json({ error: "Access token required" });
       return;
     }
 
-    // Validate token format (basic check)
-    if (token.length < 10 || !token.includes(".")) {
-      res.status(401).json({ error: "Invalid token format" });
-      return;
-    }
+    // Verify with Firebase Admin
+    const decodedToken = await adminAuth.verifyIdToken(idToken);
 
-    // Verify and decode token
-    const decoded = verifyToken(token);
+    // Try to load the Firestore profile for richer data (name etc.)
+    const profileDoc = await adminDb
+      .collection("users")
+      .doc(decodedToken.uid)
+      .get();
 
-    // Validate user ID format
-    if (!DatabaseSecurity.isValidUUID(decoded.userId)) {
-      res.status(401).json({ error: "Invalid user ID format" });
-      return;
-    }
+    const profile = profileDoc.exists ? (profileDoc.data() as any) : null;
 
-    // Use constant-time database lookup to prevent timing attacks
-    const user = await DatabaseSecurity.constantTimeCompare(
-      UserModel.findById(decoded.userId),
-      100, // minimum 100ms delay
-    );
-
-    if (!user) {
-      res.status(401).json({ error: "User not found" });
-      return;
-    }
-
-    // Attach user to request
     req.user = {
-      id: user.id,
-      name: DatabaseSecurity.sanitizeInput(user.name),
-      email: DatabaseSecurity.sanitizeInput(user.email),
+      id: decodedToken.uid,
+      name: profile?.name ?? decodedToken.name ?? "",
+      email: decodedToken.email ?? "",
     };
-
-    // Log successful authentication (for security monitoring)
-    if (process.env.NODE_ENV === "production") {
-      console.log(`User authenticated: ${user.id} from ${req.ip}`);
-    }
 
     next();
   } catch (error) {
-    // Enhanced error logging for security monitoring
     console.warn(
-      `Authentication failed from ${req.ip}:`,
+      `Firebase auth failed from ${req.ip}:`,
       error instanceof Error ? error.message : "Unknown error",
     );
 

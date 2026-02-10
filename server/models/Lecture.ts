@@ -1,11 +1,10 @@
-import { getDatabase } from "../database/connection.js";
-import { v4 as uuidv4 } from "uuid";
+import { adminDb } from "../config/firebase-admin.js";
 
 export interface Lecture {
   id: string;
   user_id: string;
   name: string;
-  schedule_days: string; // JSON string
+  schedule_days: string[];
   schedule_time: string;
   created_at: string;
   updated_at: string;
@@ -13,7 +12,7 @@ export interface Lecture {
 
 export interface CreateLectureData {
   name: string;
-  schedule_days: string[]; // Array of days
+  schedule_days: string[];
   schedule_time: string;
 }
 
@@ -30,62 +29,50 @@ export interface LectureResponse {
   updated_at: string;
 }
 
+const lecturesCol = () => adminDb.collection("lectures");
+const attendanceCol = () => adminDb.collection("attendance");
+
 export class LectureModel {
   static async create(
     userId: string,
     lectureData: CreateLectureData,
   ): Promise<LectureResponse> {
-    const db = await getDatabase();
-    const id = uuidv4();
+    const docRef = lecturesCol().doc(); // auto-generated ID
+    const now = new Date().toISOString();
 
-    await db.run(
-      `INSERT INTO lectures (id, user_id, name, schedule_days, schedule_time) 
-       VALUES (?, ?, ?, ?, ?)`,
-      [
-        id,
-        userId,
-        lectureData.name,
-        JSON.stringify(lectureData.schedule_days),
-        lectureData.schedule_time,
-      ],
-    );
+    const lecture: Lecture = {
+      id: docRef.id,
+      user_id: userId,
+      name: lectureData.name,
+      schedule_days: lectureData.schedule_days,
+      schedule_time: lectureData.schedule_time,
+      created_at: now,
+      updated_at: now,
+    };
 
-    const lecture = await db.get<Lecture>(
-      `SELECT * FROM lectures WHERE id = ?`,
-      [id],
-    );
-    if (!lecture) {
-      throw new Error("Failed to create lecture");
-    }
-
+    await docRef.set(lecture);
     return await this.toResponse(lecture);
   }
 
   static async findByUserId(userId: string): Promise<LectureResponse[]> {
-    const db = await getDatabase();
-    const lectures = await db.all<Lecture[]>(
-      `SELECT * FROM lectures WHERE user_id = ? ORDER BY created_at DESC`,
-      [userId],
-    );
+    const snap = await lecturesCol()
+      .where("user_id", "==", userId)
+      .orderBy("created_at", "desc")
+      .get();
 
-    const lectureResponses = await Promise.all(
-      lectures.map((lecture) => this.toResponse(lecture)),
-    );
-
-    return lectureResponses;
+    const lectures = snap.docs.map((d) => d.data() as Lecture);
+    return Promise.all(lectures.map((l) => this.toResponse(l)));
   }
 
   static async findById(
     lectureId: string,
     userId: string,
   ): Promise<LectureResponse | undefined> {
-    const db = await getDatabase();
-    const lecture = await db.get<Lecture>(
-      `SELECT * FROM lectures WHERE id = ? AND user_id = ?`,
-      [lectureId, userId],
-    );
-
-    return lecture ? await this.toResponse(lecture) : undefined;
+    const doc = await lecturesCol().doc(lectureId).get();
+    if (!doc.exists) return undefined;
+    const lecture = doc.data() as Lecture;
+    if (lecture.user_id !== userId) return undefined;
+    return this.toResponse(lecture);
   }
 
   static async update(
@@ -93,71 +80,53 @@ export class LectureModel {
     userId: string,
     updateData: Partial<CreateLectureData>,
   ): Promise<LectureResponse | undefined> {
-    const db = await getDatabase();
+    const doc = await lecturesCol().doc(lectureId).get();
+    if (!doc.exists) return undefined;
+    const lecture = doc.data() as Lecture;
+    if (lecture.user_id !== userId) return undefined;
 
-    const setClause = [];
-    const values = [];
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (updateData.name) updates.name = updateData.name;
+    if (updateData.schedule_days) updates.schedule_days = updateData.schedule_days;
+    if (updateData.schedule_time) updates.schedule_time = updateData.schedule_time;
 
-    if (updateData.name) {
-      setClause.push("name = ?");
-      values.push(updateData.name);
-    }
-    if (updateData.schedule_days) {
-      setClause.push("schedule_days = ?");
-      values.push(JSON.stringify(updateData.schedule_days));
-    }
-    if (updateData.schedule_time) {
-      setClause.push("schedule_time = ?");
-      values.push(updateData.schedule_time);
-    }
-
-    if (setClause.length === 0) {
-      throw new Error("No fields to update");
-    }
-
-    setClause.push("updated_at = CURRENT_TIMESTAMP");
-    values.push(lectureId, userId);
-
-    await db.run(
-      `UPDATE lectures SET ${setClause.join(", ")} WHERE id = ? AND user_id = ?`,
-      values,
-    );
-
-    return await this.findById(lectureId, userId);
+    await lecturesCol().doc(lectureId).update(updates);
+    return this.findById(lectureId, userId);
   }
 
   static async delete(lectureId: string, userId: string): Promise<boolean> {
-    const db = await getDatabase();
-    const result = await db.run(
-      `DELETE FROM lectures WHERE id = ? AND user_id = ?`,
-      [lectureId, userId],
-    );
+    const doc = await lecturesCol().doc(lectureId).get();
+    if (!doc.exists) return false;
+    const lecture = doc.data() as Lecture;
+    if (lecture.user_id !== userId) return false;
 
-    return (result.changes ?? 0) > 0;
+    // Delete related attendance records
+    const attSnap = await attendanceCol()
+      .where("lecture_id", "==", lectureId)
+      .get();
+    const batch = adminDb.batch();
+    attSnap.docs.forEach((d) => batch.delete(d.ref));
+    batch.delete(lecturesCol().doc(lectureId));
+    await batch.commit();
+    return true;
   }
 
   static async toResponse(lecture: Lecture): Promise<LectureResponse> {
-    const db = await getDatabase();
+    // Get attendance stats for this lecture
+    const attSnap = await attendanceCol()
+      .where("lecture_id", "==", lecture.id)
+      .get();
 
-    // Get attendance stats
-    const attendanceStats = await db.get<{
-      total: number;
-      present: number;
-    }>(
-      `SELECT 
-         COUNT(*) as total,
-         SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present
-       FROM attendance 
-       WHERE lecture_id = ?`,
-      [lecture.id],
-    );
+    let total = 0;
+    let present = 0;
+    attSnap.docs.forEach((d) => {
+      total++;
+      if ((d.data() as any).status === "present") present++;
+    });
 
-    const total = attendanceStats?.total || 0;
-    const present = attendanceStats?.present || 0;
     const attendancePercentage =
       total > 0 ? Math.round((present / total) * 100) : 0;
 
-    // Calculate classes needed to reach 75%
     const classesTo75Percent = Math.max(
       0,
       Math.ceil((75 * total - 100 * present) / 25),
@@ -166,7 +135,7 @@ export class LectureModel {
     return {
       id: lecture.id,
       name: lecture.name,
-      schedule_days: JSON.parse(lecture.schedule_days),
+      schedule_days: lecture.schedule_days,
       schedule_time: lecture.schedule_time,
       attendance_percentage: attendancePercentage,
       total_classes: total,

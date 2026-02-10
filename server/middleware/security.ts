@@ -24,13 +24,6 @@ export const createRateLimit = (
   });
 };
 
-// Strict rate limiting for auth endpoints
-export const authRateLimit = createRateLimit(
-  15 * 60 * 1000, // 15 minutes
-  5, // 5 attempts
-  "Too many authentication attempts. Please try again later.",
-);
-
 // General API rate limiting
 export const apiRateLimit = createRateLimit(
   1 * 60 * 1000, // 1 minute
@@ -54,7 +47,7 @@ export const securityHeaders = helmet({
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
       scriptSrc: ["'self'"],
-      connectSrc: ["'self'"],
+      connectSrc: ["'self'", "https://*.googleapis.com", "https://*.firebaseio.com", "wss://*.firebaseio.com", "https://identitytoolkit.googleapis.com", "https://securetoken.googleapis.com"],
       frameSrc: ["'none'"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
@@ -70,7 +63,7 @@ export const securityHeaders = helmet({
 });
 
 // Input validation schemas
-export const validateRegister = [
+export const validateProfileCreation = [
   body("name")
     .trim()
     .isLength({ min: 2, max: 50 })
@@ -83,22 +76,6 @@ export const validateRegister = [
     .withMessage("Must be a valid email")
     .isLength({ max: 254 })
     .withMessage("Email too long"),
-  body("password")
-    .isLength({ min: 8, max: 128 })
-    .withMessage("Password must be between 8 and 128 characters")
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
-    .withMessage(
-      "Password must contain uppercase, lowercase, number, and special character",
-    ),
-];
-
-export const validateLogin = [
-  body("email").isEmail().normalizeEmail().withMessage("Must be a valid email"),
-  body("password")
-    .notEmpty()
-    .withMessage("Password is required")
-    .isLength({ max: 128 })
-    .withMessage("Password too long"),
 ];
 
 export const validateLecture = [
@@ -153,7 +130,11 @@ export const validateAssignment = [
 ];
 
 export const validateAttendance = [
-  body("lecture_id").isUUID().withMessage("Invalid lecture ID"),
+  body("lecture_id")
+    .isString()
+    .trim()
+    .isLength({ min: 1, max: 128 })
+    .withMessage("Invalid lecture ID"),
   body("date").isISO8601().withMessage("Invalid date format"),
   body("status")
     .isIn(["present", "absent", "cancelled"])
@@ -167,7 +148,11 @@ export const validateUpdateAttendance = [
 ];
 
 export const validateId = [
-  param("id").isUUID().withMessage("Invalid ID format"),
+  param("id")
+    .isString()
+    .trim()
+    .isLength({ min: 1, max: 128 })
+    .withMessage("Invalid ID format"),
 ];
 
 // Validation error handler
@@ -264,7 +249,7 @@ export const ipMonitoring = (
   }
 
   // Track auth attempts using response finish event
-  if (req.path.includes("/auth/login") || req.path.includes("/auth/register")) {
+  if (req.path.includes("/auth/register")) {
     res.on("finish", () => {
       // Only track failed auth attempts (401, 403)
       if (res.statusCode === 401 || res.statusCode === 403) {

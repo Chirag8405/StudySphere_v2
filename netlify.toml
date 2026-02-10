@@ -7,6 +7,20 @@
   NODE_VERSION = "18"
   NPM_FLAGS = "--include=dev"
 
+[functions]
+  included_files = ["dist/server/**"]
+  external_node_modules = [
+    "firebase-admin",
+    "express",
+    "cors",
+    "helmet",
+    "express-rate-limit",
+    "express-validator",
+    "serverless-http",
+    "date-fns",
+    "zod",
+  ]
+
 [dev]
   command = "npm run dev:frontend"
   targetPort = 8082

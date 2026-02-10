@@ -28,15 +28,16 @@ class SecurityValidator {
     this.checks = [
       // Environment Security
       {
-        name: "JWT_SECRET_STRENGTH",
-        description: "JWT secret is cryptographically strong",
+        name: "FIREBASE_SERVICE_ACCOUNT",
+        description: "Firebase service account key is configured",
         severity: "CRITICAL",
         check: () => {
-          const secret = process.env.JWT_SECRET;
-          if (!secret) return false;
-          return secret.length >= 64 && !/^[a-zA-Z0-9]+$/.test(secret);
+          return (
+            !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY ||
+            !!process.env.GOOGLE_APPLICATION_CREDENTIALS
+          );
         },
-        fix: "Generate a strong JWT secret: openssl rand -hex 64",
+        fix: "Set FIREBASE_SERVICE_ACCOUNT_KEY or GOOGLE_APPLICATION_CREDENTIALS env var",
       },
 
       {
@@ -57,37 +58,6 @@ class SecurityValidator {
           );
         },
         fix: "Set CORS_ORIGINS to specific HTTPS domains only",
-      },
-
-      {
-        name: "BCRYPT_ROUNDS",
-        description: "Bcrypt rounds are sufficient",
-        severity: "MEDIUM",
-        check: () => {
-          const rounds = parseInt(process.env.BCRYPT_ROUNDS || "12", 10);
-          return rounds >= 12;
-        },
-        fix: "Set BCRYPT_ROUNDS to at least 12",
-      },
-
-      // File Security
-      {
-        name: "DATABASE_PERMISSIONS",
-        description: "Database file has secure permissions",
-        severity: "HIGH",
-        check: async () => {
-          try {
-            const dbPath = process.env.DATABASE_PATH || "./studysphere.db";
-            if (!fs.existsSync(dbPath)) return true; // File doesn't exist yet
-
-            const stats = fs.statSync(dbPath);
-            const mode = stats.mode & parseInt("777", 8);
-            return mode <= parseInt("600", 8); // Owner read/write only
-          } catch {
-            return false;
-          }
-        },
-        fix: "chmod 600 /path/to/studysphere.db",
       },
 
       {

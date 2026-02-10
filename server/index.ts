@@ -6,23 +6,21 @@ import config from "./config/environment.js";
 import {
   securityHeaders,
   apiRateLimit,
-  authRateLimit,
   sensitiveRateLimit,
   handleValidationErrors,
   sanitizeRequest,
   errorLogger,
   ipMonitoring,
-  validateRegister,
-  validateLogin,
   validateLecture,
   validateAssignment,
   validateAttendance,
   validateUpdateAttendance,
   validateId,
+  validateProfileCreation,
 } from "./middleware/security.js";
 
 // Route imports
-import { login, register, getProfile, refreshTokenHandler } from "./routes/auth.js";
+import { register, getProfile } from "./routes/auth.js";
 import {
   getLectures,
   getLecture,
@@ -53,7 +51,7 @@ import { getDashboardData } from "./routes/dashboard.js";
 export function createServer() {
   const app = express();
 
-  // Initialize database
+  // Initialize Firestore (no-op, but keeps the startup sequence consistent)
   initializeDatabase().catch((error) => {
     console.error("Failed to initialize database:", error);
   });
@@ -69,7 +67,7 @@ export function createServer() {
   app.use(
     cors({
       origin: config.corsOrigins,
-      methods: ["GET", "POST", "PUT", "DELETE"],
+      methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
       allowedHeaders: ["Content-Type", "Authorization"],
       credentials: true,
       maxAge: 86400, // 24 hours
@@ -96,25 +94,17 @@ export function createServer() {
     });
   });
 
-  // Auth routes (public) with strict rate limiting and validation
-  app.post(
-    "/api/auth/login",
-    authRateLimit,
-    validateLogin,
-    handleValidationErrors,
-    login,
-  );
+  // Auth routes – register creates Firestore profile (requires Firebase token),
+  // profile returns current user info
   app.post(
     "/api/auth/register",
-    authRateLimit,
-    validateRegister,
+    authenticateToken,
+    validateProfileCreation,
     handleValidationErrors,
     register,
   );
 
-  // Auth routes (protected)
   app.get("/api/auth/profile", authenticateToken, getProfile);
-  app.post("/api/auth/refresh", authenticateToken, refreshTokenHandler);
 
   // Dashboard route (protected)
   app.get("/api/dashboard", authenticateToken, getDashboardData);

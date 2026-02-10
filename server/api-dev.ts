@@ -18,7 +18,6 @@ async function startApiServer() {
       console.log(`✅ API server running on port ${PORT}`);
       console.log(`🌐 API endpoints available at http://localhost:${PORT}/api`);
       console.log(`🔐 Ready for user registration and login`);
-      console.log(`💡 Run 'npm run seed' to add demo data for development`);
     });
   } catch (error) {
     console.error("❌ Failed to start API server:", error);

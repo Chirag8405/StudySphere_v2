@@ -31,6 +31,10 @@ studysphere.db
 !.env.production.example
 !.env.netlify.example
 
+# Firebase service account key files (NEVER commit)
+*-firebase-adminsdk-*.json
+serviceAccountKey*.json
+
 # Editor directories and files
 .vscode/
 !.vscode/extensions.json
@@ -53,10 +57,6 @@ Thumbs.db
 
 # Docker artifacts
 *.pid
-
-# Redundant/removed files (if any remain)
-server/utils/jwt.ts
-server/routes/demo.ts
 
 # Misc
 production-checklist.md

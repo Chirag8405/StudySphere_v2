@@ -1,5 +1,4 @@
-import { getDatabase } from "../database/connection.js";
-import { v4 as uuidv4 } from "uuid";
+import { adminDb } from "../config/firebase-admin.js";
 
 export type AttendanceStatus = "present" | "absent" | "cancelled";
 
@@ -37,99 +36,102 @@ export interface AttendanceStatsResponse {
   attendance_percentage: number;
 }
 
+const attendanceCol = () => adminDb.collection("attendance");
+const lecturesCol = () => adminDb.collection("lectures");
+
 export class AttendanceModel {
   static async create(
     userId: string,
     attendanceData: CreateAttendanceData,
   ): Promise<AttendanceResponse> {
-    const db = await getDatabase();
-    const id = uuidv4();
+    // Verify lecture belongs to user
+    const lectureDoc = await lecturesCol().doc(attendanceData.lecture_id).get();
+    if (!lectureDoc.exists) throw new Error("Lecture not found or access denied");
+    const lecture = lectureDoc.data() as any;
+    if (lecture.user_id !== userId) throw new Error("Lecture not found or access denied");
 
-    // Verify that the lecture belongs to the user
-    const lecture = await db.get(
-      `SELECT id FROM lectures WHERE id = ? AND user_id = ?`,
-      [attendanceData.lecture_id, userId],
-    );
+    // Check duplicate
+    const existing = await attendanceCol()
+      .where("lecture_id", "==", attendanceData.lecture_id)
+      .where("date", "==", attendanceData.date)
+      .limit(1)
+      .get();
+    if (!existing.empty) throw new Error("Attendance already marked for this date");
 
-    if (!lecture) {
-      throw new Error("Lecture not found or access denied");
-    }
+    const docRef = attendanceCol().doc();
+    const now = new Date().toISOString();
 
-    // Check if attendance already exists for this lecture and date
-    const existing = await db.get(
-      `SELECT id FROM attendance WHERE lecture_id = ? AND date = ?`,
-      [attendanceData.lecture_id, attendanceData.date],
-    );
+    const record: Attendance = {
+      id: docRef.id,
+      lecture_id: attendanceData.lecture_id,
+      user_id: userId,
+      date: attendanceData.date,
+      status: attendanceData.status,
+      created_at: now,
+      updated_at: now,
+    };
 
-    if (existing) {
-      throw new Error("Attendance already marked for this date");
-    }
+    await docRef.set(record);
 
-    await db.run(
-      `INSERT INTO attendance (id, lecture_id, user_id, date, status) 
-       VALUES (?, ?, ?, ?, ?)`,
-      [
-        id,
-        attendanceData.lecture_id,
-        userId,
-        attendanceData.date,
-        attendanceData.status,
-      ],
-    );
-
-    const attendance = await this.findById(id, userId);
-    if (!attendance) {
-      throw new Error("Failed to create attendance record");
-    }
-
-    return attendance;
+    return {
+      ...record,
+      lecture_name: lecture.name,
+    };
   }
 
   static async findById(
     attendanceId: string,
     userId: string,
   ): Promise<AttendanceResponse | undefined> {
-    const db = await getDatabase();
-    const attendance = await db.get<AttendanceResponse>(
-      `SELECT a.*, l.name as lecture_name
-       FROM attendance a
-       JOIN lectures l ON a.lecture_id = l.id
-       WHERE a.id = ? AND a.user_id = ?`,
-      [attendanceId, userId],
-    );
+    const doc = await attendanceCol().doc(attendanceId).get();
+    if (!doc.exists) return undefined;
+    const record = doc.data() as Attendance;
+    if (record.user_id !== userId) return undefined;
 
-    return attendance;
+    const lectureDoc = await lecturesCol().doc(record.lecture_id).get();
+    const lectureName = lectureDoc.exists ? (lectureDoc.data() as any).name : "Unknown";
+
+    return { ...record, lecture_name: lectureName };
   }
 
   static async findByLectureId(
     lectureId: string,
     userId: string,
   ): Promise<AttendanceResponse[]> {
-    const db = await getDatabase();
-    const attendance = await db.all<AttendanceResponse[]>(
-      `SELECT a.*, l.name as lecture_name
-       FROM attendance a
-       JOIN lectures l ON a.lecture_id = l.id
-       WHERE a.lecture_id = ? AND a.user_id = ?
-       ORDER BY a.date DESC`,
-      [lectureId, userId],
-    );
+    const snap = await attendanceCol()
+      .where("lecture_id", "==", lectureId)
+      .where("user_id", "==", userId)
+      .orderBy("date", "desc")
+      .get();
 
-    return attendance;
+    const lectureDoc = await lecturesCol().doc(lectureId).get();
+    const lectureName = lectureDoc.exists ? (lectureDoc.data() as any).name : "Unknown";
+
+    return snap.docs.map((d) => {
+      const data = d.data() as Attendance;
+      return { ...data, lecture_name: lectureName };
+    });
   }
 
   static async findByUserId(userId: string): Promise<AttendanceResponse[]> {
-    const db = await getDatabase();
-    const attendance = await db.all<AttendanceResponse[]>(
-      `SELECT a.*, l.name as lecture_name
-       FROM attendance a
-       JOIN lectures l ON a.lecture_id = l.id
-       WHERE a.user_id = ?
-       ORDER BY a.date DESC`,
-      [userId],
-    );
+    const snap = await attendanceCol()
+      .where("user_id", "==", userId)
+      .orderBy("date", "desc")
+      .get();
 
-    return attendance;
+    // Batch fetch lecture names
+    const records = snap.docs.map((d) => d.data() as Attendance);
+    const lectureIds = [...new Set(records.map((r) => r.lecture_id))];
+    const lectureMap = new Map<string, string>();
+    for (const lid of lectureIds) {
+      const ld = await lecturesCol().doc(lid).get();
+      lectureMap.set(lid, ld.exists ? (ld.data() as any).name : "Unknown");
+    }
+
+    return records.map((r) => ({
+      ...r,
+      lecture_name: lectureMap.get(r.lecture_id) || "Unknown",
+    }));
   }
 
   static async update(
@@ -137,94 +139,79 @@ export class AttendanceModel {
     userId: string,
     status: AttendanceStatus,
   ): Promise<AttendanceResponse | undefined> {
-    const db = await getDatabase();
+    const doc = await attendanceCol().doc(attendanceId).get();
+    if (!doc.exists) return undefined;
+    const record = doc.data() as Attendance;
+    if (record.user_id !== userId) return undefined;
 
-    await db.run(
-      `UPDATE attendance 
-       SET status = ?, updated_at = CURRENT_TIMESTAMP 
-       WHERE id = ? AND user_id = ?`,
-      [status, attendanceId, userId],
-    );
+    await attendanceCol().doc(attendanceId).update({
+      status,
+      updated_at: new Date().toISOString(),
+    });
 
-    return await this.findById(attendanceId, userId);
+    return this.findById(attendanceId, userId);
   }
 
   static async delete(attendanceId: string, userId: string): Promise<boolean> {
-    const db = await getDatabase();
-    const result = await db.run(
-      `DELETE FROM attendance WHERE id = ? AND user_id = ?`,
-      [attendanceId, userId],
-    );
-
-    return (result.changes ?? 0) > 0;
+    const doc = await attendanceCol().doc(attendanceId).get();
+    if (!doc.exists) return false;
+    const record = doc.data() as Attendance;
+    if (record.user_id !== userId) return false;
+    await attendanceCol().doc(attendanceId).delete();
+    return true;
   }
 
   static async getStats(userId: string): Promise<AttendanceStatsResponse> {
-    const db = await getDatabase();
-    const stats = await db.get<{
-      total: number;
-      present: number;
-      absent: number;
-      cancelled: number;
-    }>(
-      `SELECT 
-         COUNT(*) as total,
-         SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
-         SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
-         SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled
-       FROM attendance a
-       JOIN lectures l ON a.lecture_id = l.id
-       WHERE a.user_id = ?`,
-      [userId],
-    );
+    const snap = await attendanceCol()
+      .where("user_id", "==", userId)
+      .get();
 
-    const total = stats?.total || 0;
-    const present = stats?.present || 0;
-    const absent = stats?.absent || 0;
-    const cancelled = stats?.cancelled || 0;
-    const attendancePercentage =
-      total > 0 ? Math.round((present / total) * 100) : 0;
+    let total = 0, present = 0, absent = 0, cancelled = 0;
+    snap.docs.forEach((d) => {
+      const s = (d.data() as Attendance).status;
+      total++;
+      if (s === "present") present++;
+      else if (s === "absent") absent++;
+      else if (s === "cancelled") cancelled++;
+    });
 
     return {
       total_classes: total,
       attended_classes: present,
       absent_classes: absent,
       cancelled_classes: cancelled,
-      attendance_percentage: attendancePercentage,
+      attendance_percentage: total > 0 ? Math.round((present / total) * 100) : 0,
     };
   }
 
   static async getWeeklyStats(
     userId: string,
   ): Promise<Array<{ day: string; attended: number; total: number }>> {
-    const db = await getDatabase();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const cutoff = sevenDaysAgo.toISOString().slice(0, 10);
 
-    // Get the last 7 days
-    const weeklyStats = await db.all<
-      Array<{ day: string; attended: number; total: number }>
-    >(
-      `SELECT 
-         strftime('%w', a.date) as day_num,
-         CASE strftime('%w', a.date)
-           WHEN '0' THEN 'Sun'
-           WHEN '1' THEN 'Mon'
-           WHEN '2' THEN 'Tue'
-           WHEN '3' THEN 'Wed'
-           WHEN '4' THEN 'Thu'
-           WHEN '5' THEN 'Fri'
-           WHEN '6' THEN 'Sat'
-         END as day,
-         COUNT(*) as total,
-         SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as attended
-       FROM attendance a
-       JOIN lectures l ON a.lecture_id = l.id
-       WHERE a.user_id = ? 
-         AND a.date >= date('now', '-7 days')
-       GROUP BY strftime('%w', a.date)
-       ORDER BY day_num`,
-      [userId],
-    );
+    const snap = await attendanceCol()
+      .where("user_id", "==", userId)
+      .where("date", ">=", cutoff)
+      .get();
 
-    return weeklyStats;
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const dayMap = new Map<string, { attended: number; total: number }>();
+
+    snap.docs.forEach((d) => {
+      const data = d.data() as Attendance;
+      const dayIdx = new Date(data.date).getDay();
+      const dayName = dayNames[dayIdx];
+      const entry = dayMap.get(dayName) || { attended: 0, total: 0 };
+      entry.total++;
+      if (data.status === "present") entry.attended++;
+      dayMap.set(dayName, entry);
+    });
+
+    return Array.from(dayMap.entries()).map(([day, stats]) => ({
+      day,
+      ...stats,
+    }));
   }
 }

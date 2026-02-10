@@ -15,10 +15,7 @@ export default defineConfig({
       },
       external: [
         "express",
-        "sqlite3",
-        "bcryptjs",
-        "jsonwebtoken",
-        "uuid",
+        "firebase-admin",
         "date-fns",
         "serverless-http",
       ],

@@ -1,5 +1,4 @@
-import { getDatabase } from "../database/connection.js";
-import { v4 as uuidv4 } from "uuid";
+import { adminDb } from "../config/firebase-admin.js";
 
 export type AssignmentStatus = "pending" | "completed" | "missed";
 export type AssignmentPriority = "low" | "medium" | "high";
@@ -56,70 +55,62 @@ export interface AssignmentStatsResponse {
   overdue: number;
 }
 
+const assignmentsCol = () => adminDb.collection("assignments");
+
 export class AssignmentModel {
   static async create(
     userId: string,
     assignmentData: CreateAssignmentData,
   ): Promise<AssignmentResponse> {
-    const db = await getDatabase();
-    const id = uuidv4();
+    const docRef = assignmentsCol().doc();
+    const now = new Date().toISOString();
 
-    await db.run(
-      `INSERT INTO assignments (id, user_id, title, subject, description, due_date, priority) 
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [
-        id,
-        userId,
-        assignmentData.title,
-        assignmentData.subject,
-        assignmentData.description || null,
-        assignmentData.due_date,
-        assignmentData.priority || "medium",
-      ],
-    );
+    const assignment: Assignment = {
+      id: docRef.id,
+      user_id: userId,
+      title: assignmentData.title,
+      subject: assignmentData.subject,
+      description: assignmentData.description || null,
+      due_date: assignmentData.due_date,
+      status: "pending",
+      priority: assignmentData.priority || "medium",
+      created_at: now,
+      updated_at: now,
+    };
 
-    const assignment = await this.findById(id, userId);
-    if (!assignment) {
-      throw new Error("Failed to create assignment");
-    }
-
-    return assignment;
+    await docRef.set(assignment);
+    return this.toResponse(assignment);
   }
 
   static async findById(
     assignmentId: string,
     userId: string,
   ): Promise<AssignmentResponse | undefined> {
-    const db = await getDatabase();
-    const assignment = await db.get<Assignment>(
-      `SELECT * FROM assignments WHERE id = ? AND user_id = ?`,
-      [assignmentId, userId],
-    );
-
-    return assignment ? this.toResponse(assignment) : undefined;
+    const doc = await assignmentsCol().doc(assignmentId).get();
+    if (!doc.exists) return undefined;
+    const a = doc.data() as Assignment;
+    if (a.user_id !== userId) return undefined;
+    return this.toResponse(a);
   }
 
   static async findByUserId(userId: string): Promise<AssignmentResponse[]> {
-    const db = await getDatabase();
-    const assignments = await db.all<Assignment[]>(
-      `SELECT * FROM assignments WHERE user_id = ? ORDER BY due_date ASC`,
-      [userId],
-    );
-
-    return assignments.map((assignment) => this.toResponse(assignment));
+    const snap = await assignmentsCol()
+      .where("user_id", "==", userId)
+      .orderBy("due_date", "asc")
+      .get();
+    return snap.docs.map((d) => this.toResponse(d.data() as Assignment));
   }
 
   static async findByStatus(
     userId: string,
     status: AssignmentStatus,
   ): Promise<AssignmentResponse[]> {
-    const db = await getDatabase();
-    const assignments = await db.all<Assignment[]>(
-      `SELECT * FROM assignments WHERE user_id = ? AND status = ? ORDER BY due_date ASC`,
-      [userId, status],
-    );
-
-    return assignments.map((assignment) => this.toResponse(assignment));
+    const snap = await assignmentsCol()
+      .where("user_id", "==", userId)
+      .where("status", "==", status)
+      .orderBy("due_date", "asc")
+      .get();
+    return snap.docs.map((d) => this.toResponse(d.data() as Assignment));
   }
 
   static async update(
@@ -127,106 +118,72 @@ export class AssignmentModel {
     userId: string,
     updateData: UpdateAssignmentData,
   ): Promise<AssignmentResponse | undefined> {
-    const db = await getDatabase();
+    const doc = await assignmentsCol().doc(assignmentId).get();
+    if (!doc.exists) return undefined;
+    const a = doc.data() as Assignment;
+    if (a.user_id !== userId) return undefined;
 
-    const setClause = [];
-    const values = [];
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (updateData.title) updates.title = updateData.title;
+    if (updateData.subject) updates.subject = updateData.subject;
+    if (updateData.description !== undefined) updates.description = updateData.description || null;
+    if (updateData.due_date) updates.due_date = updateData.due_date;
+    if (updateData.status) updates.status = updateData.status;
+    if (updateData.priority) updates.priority = updateData.priority;
 
-    if (updateData.title) {
-      setClause.push("title = ?");
-      values.push(updateData.title);
-    }
-    if (updateData.subject) {
-      setClause.push("subject = ?");
-      values.push(updateData.subject);
-    }
-    if (updateData.description !== undefined) {
-      setClause.push("description = ?");
-      values.push(updateData.description || null);
-    }
-    if (updateData.due_date) {
-      setClause.push("due_date = ?");
-      values.push(updateData.due_date);
-    }
-    if (updateData.status) {
-      setClause.push("status = ?");
-      values.push(updateData.status);
-    }
-    if (updateData.priority) {
-      setClause.push("priority = ?");
-      values.push(updateData.priority);
-    }
-
-    if (setClause.length === 0) {
-      throw new Error("No fields to update");
-    }
-
-    setClause.push("updated_at = CURRENT_TIMESTAMP");
-    values.push(assignmentId, userId);
-
-    await db.run(
-      `UPDATE assignments SET ${setClause.join(", ")} WHERE id = ? AND user_id = ?`,
-      values,
-    );
-
-    return await this.findById(assignmentId, userId);
+    await assignmentsCol().doc(assignmentId).update(updates);
+    return this.findById(assignmentId, userId);
   }
 
   static async delete(assignmentId: string, userId: string): Promise<boolean> {
-    const db = await getDatabase();
-    const result = await db.run(
-      `DELETE FROM assignments WHERE id = ? AND user_id = ?`,
-      [assignmentId, userId],
-    );
-
-    return (result.changes ?? 0) > 0;
+    const doc = await assignmentsCol().doc(assignmentId).get();
+    if (!doc.exists) return false;
+    const a = doc.data() as Assignment;
+    if (a.user_id !== userId) return false;
+    await assignmentsCol().doc(assignmentId).delete();
+    return true;
   }
 
   static async getStats(userId: string): Promise<AssignmentStatsResponse> {
-    const db = await getDatabase();
-    const stats = await db.get<{
-      total: number;
-      completed: number;
-      pending: number;
-      missed: number;
-    }>(
-      `SELECT 
-         COUNT(*) as total,
-         SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
-         SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-         SUM(CASE WHEN status = 'missed' THEN 1 ELSE 0 END) as missed
-       FROM assignments 
-       WHERE user_id = ?`,
-      [userId],
-    );
+    const snap = await assignmentsCol()
+      .where("user_id", "==", userId)
+      .get();
 
-    // Count overdue assignments
-    const overdue = await db.get<{ count: number }>(
-      `SELECT COUNT(*) as count
-       FROM assignments 
-       WHERE user_id = ? AND status = 'pending' AND due_date < date('now')`,
-      [userId],
-    );
+    const today = new Date().toISOString().slice(0, 10);
+    let total = 0, completed = 0, pending = 0, missed = 0, overdue = 0;
 
-    return {
-      total: stats?.total || 0,
-      completed: stats?.completed || 0,
-      pending: stats?.pending || 0,
-      missed: stats?.missed || 0,
-      overdue: overdue?.count || 0,
-    };
+    snap.docs.forEach((d) => {
+      const a = d.data() as Assignment;
+      total++;
+      if (a.status === "completed") completed++;
+      else if (a.status === "pending") {
+        pending++;
+        if (a.due_date < today) overdue++;
+      } else if (a.status === "missed") missed++;
+    });
+
+    return { total, completed, pending, missed, overdue };
   }
 
   static async markOverdueAsMissed(userId: string): Promise<number> {
-    const db = await getDatabase();
-    const result = await db.run(
-      `UPDATE assignments 
-       SET status = 'missed', updated_at = CURRENT_TIMESTAMP
-       WHERE user_id = ? AND status = 'pending' AND due_date < date('now')`,
-      [userId],
-    );
+    const today = new Date().toISOString().slice(0, 10);
+    const snap = await assignmentsCol()
+      .where("user_id", "==", userId)
+      .where("status", "==", "pending")
+      .get();
 
-    return result.changes || 0;
+    const batch = adminDb.batch();
+    let count = 0;
+    snap.docs.forEach((d) => {
+      const a = d.data() as Assignment;
+      if (a.due_date < today) {
+        batch.update(d.ref, { status: "missed", updated_at: new Date().toISOString() });
+        count++;
+      }
+    });
+
+    if (count > 0) await batch.commit();
+    return count;
   }
 
   static toResponse(assignment: Assignment): AssignmentResponse {

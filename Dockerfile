@@ -36,9 +36,6 @@ COPY --from=builder --chown=studysphere:nodejs /app/node_modules ./node_modules
 ENV NODE_ENV=production
 ENV PORT=8080
 
-# Create database directory
-RUN mkdir -p /app/data && chown studysphere:nodejs /app/data
-
 # Switch to non-root user
 USER studysphere
 

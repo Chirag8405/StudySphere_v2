@@ -1,13 +1,9 @@
-import { getDatabase } from "../database/connection.js";
-import bcrypt from "bcryptjs";
-import { v4 as uuidv4 } from "uuid";
-import config from "../config/environment.js";
+import { adminDb, adminAuth } from "../config/firebase-admin.js";
 
 export interface User {
   id: string;
   name: string;
   email: string;
-  password: string;
   created_at: string;
   updated_at: string;
 }
@@ -26,47 +22,62 @@ export interface UserResponse {
   updated_at: string;
 }
 
+const usersCollection = () => adminDb.collection("users");
+
 export class UserModel {
+  /**
+   * Create a new user in Firebase Auth + Firestore profile document.
+   * The Firebase Auth uid is used as the Firestore document ID so that
+   * security rules can be applied easily.
+   */
   static async create(userData: CreateUserData): Promise<UserResponse> {
-    const db = await getDatabase();
-    const id = uuidv4();
-    // Use configured bcrypt rounds (minimum 12 for security)
-    const saltRounds = Math.max(config.bcryptRounds, 12);
-    const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
+    // Create the Firebase Auth user
+    const userRecord = await adminAuth.createUser({
+      email: userData.email,
+      password: userData.password,
+      displayName: userData.name,
+    });
 
-    await db.run(
-      `INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)`,
-      [id, userData.name, userData.email, hashedPassword],
-    );
+    const now = new Date().toISOString();
 
-    const user = await db.get<User>(`SELECT * FROM users WHERE id = ?`, [id]);
-    if (!user) {
-      throw new Error("Failed to create user");
-    }
+    const profile: User = {
+      id: userRecord.uid,
+      name: userData.name,
+      email: userData.email,
+      created_at: now,
+      updated_at: now,
+    };
 
-    return this.toResponse(user);
+    // Store profile in Firestore
+    await usersCollection().doc(userRecord.uid).set(profile);
+
+    return this.toResponse(profile);
   }
 
   static async findByEmail(email: string): Promise<User | undefined> {
-    const db = await getDatabase();
-    return await db.get<User>(`SELECT * FROM users WHERE email = ?`, [email]);
+    try {
+      const userRecord = await adminAuth.getUserByEmail(email);
+      const doc = await usersCollection().doc(userRecord.uid).get();
+      if (!doc.exists) return undefined;
+      return doc.data() as User;
+    } catch {
+      return undefined;
+    }
   }
 
   static async findById(id: string): Promise<UserResponse | undefined> {
-    const db = await getDatabase();
-    const user = await db.get<User>(`SELECT * FROM users WHERE id = ?`, [id]);
-    return user ? this.toResponse(user) : undefined;
-  }
-
-  static async verifyPassword(
-    plainPassword: string,
-    hashedPassword: string,
-  ): Promise<boolean> {
-    return await bcrypt.compare(plainPassword, hashedPassword);
+    const doc = await usersCollection().doc(id).get();
+    if (!doc.exists) return undefined;
+    return this.toResponse(doc.data() as User);
   }
 
   static toResponse(user: User): UserResponse {
-    const { password, ...userResponse } = user;
-    return userResponse;
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      created_at: user.created_at,
+      updated_at: user.updated_at,
+    };
   }
 }
