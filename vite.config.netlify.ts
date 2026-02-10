@@ -4,7 +4,7 @@ import { resolve } from "path";
 export default defineConfig({
   build: {
     ssr: true,
-    outDir: "dist/netlify-functions",
+    outDir: "netlify/functions",
     rollupOptions: {
       input: {
         api: resolve(__dirname, "server/netlify-function.ts"),
@@ -26,6 +26,7 @@ export default defineConfig({
       ],
     },
     target: "node18",
+    emptyOutDir: true,
   },
   resolve: {
     alias: {
