@@ -31,7 +31,7 @@
     "build:production": "npm run build:client && npm run build:server:production",
     "build:server:production": "vite build --config vite.config.server-production.ts",
     "build:netlify": "npm run build:client && npm run build:server:netlify",
-    "build:server:netlify": "tsc --project tsconfig.netlify.json",
+    "build:server:netlify": "vite build --config vite.config.netlify.ts",
     "start": "node dist/server/node-build.mjs",
     "start:production": "node dist/server/node-build-production.mjs",
     "preview": "vite preview",

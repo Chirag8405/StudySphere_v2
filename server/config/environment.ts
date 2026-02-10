@@ -31,9 +31,12 @@ function parseCorsOrigins(): string[] {
     if (process.env.NODE_ENV === "development") {
       return ["http://localhost:8080", "http://localhost:3000"];
     }
-    throw new Error(
-      "CORS_ORIGINS environment variable is required in production",
+    // In production, warn but don't crash — allow requests from any origin
+    // until the deployer sets CORS_ORIGINS.
+    console.warn(
+      "CORS_ORIGINS not set — defaulting to '*'. Set CORS_ORIGINS to your domain for security.",
     );
+    return ["*"];
   }
 
   const origins = corsOrigins.split(",").map((origin) => origin.trim());
