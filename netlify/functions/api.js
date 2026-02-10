@@ -5,8 +5,6 @@ const { v4: uuidv4 } = require("uuid");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-// In-memory database for Netlify (serverless functions are stateless)
-// For production, use a database service like Turso, PlanetScale, or Supabase
 const db = {
   users: [],
   lectures: [],
